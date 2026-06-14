@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Purifier Pro | v1.4.0</title>
+    <title>Text Purifier Pro | v1.5.0</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
@@ -62,7 +62,7 @@
         .container {
             background: var(--bg-card);
             width: 100%;
-            max-width: 1000px;
+            max-width: 1100px;
             border-radius: 16px;
             box-shadow: 0 10px 30px var(--shadow);
             padding: 30px;
@@ -131,6 +131,12 @@
             margin-bottom: 4px;
         }
 
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 20px;
+        }
+
         .checkbox-group, .radio-group label {
             display: flex;
             align-items: center;
@@ -166,8 +172,8 @@
             border-color: var(--primary);
         }
 
-        .exception-input {
-            width: 150px;
+        .wide-input {
+            width: 180px;
         }
 
         /* Text Area Grid */
@@ -216,7 +222,7 @@
 
         textarea {
             width: 100%;
-            height: 250px;
+            height: 260px;
             padding: 15px;
             border: 2px solid var(--border-color);
             border-radius: 12px;
@@ -340,17 +346,20 @@
 
     <div class="container">
         <div class="header-area">
-            <h1>Text Purifier <span class="version-badge">v1.4.0</span></h1>
+            <h1>Text Purifier <span class="version-badge">v1.5.0</span></h1>
             <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
         </div>
 
         <div class="options-panel">
             <div class="options-group">
-                <div class="options-title">Filter Utama</div>
-                <label class="checkbox-group"><input type="checkbox" id="keepSpaces" checked> Pertahankan Spasi</label>
-                <label class="checkbox-group"><input type="checkbox" id="removeNumbers"> Hapus Angka</label>
-                <label class="checkbox-group"><input type="checkbox" id="removeEmptyLines"> Hapus Baris Kosong</label>
-                <label class="checkbox-group"><input type="checkbox" id="collapseSpaces"> Hapus Spasi Ganda</label>
+                <div class="options-title">Filter & Efek Utama</div>
+                <div class="checkbox-grid">
+                    <label class="checkbox-group"><input type="checkbox" id="keepSpaces" checked> Pertahankan Spasi</label>
+                    <label class="checkbox-group"><input type="checkbox" id="removeNumbers"> Hapus Angka</label>
+                    <label class="checkbox-group"><input type="checkbox" id="removeEmptyLines"> Hapus Baris Kosong</label>
+                    <label class="checkbox-group"><input type="checkbox" id="collapseSpaces"> Hapus Spasi Ganda</label>
+                    <label class="checkbox-group" style="color: var(--primary); font-weight: 500;"><input type="checkbox" id="reverseText"> 🔄 Balikkan Teks</label>
+                </div>
             </div>
 
             <div class="options-group">
@@ -364,7 +373,12 @@
 
             <div class="options-group">
                 <div class="options-title">Pengecualian Simbol</div>
-                <input type="text" id="exceptionsText" placeholder="Cth: , . @ -" class="mini-input exception-input" title="Simbol yang diketik di sini TIDAK akan dihapus">
+                <input type="text" id="exceptionsText" placeholder="Cth: , . @ -" class="mini-input wide-input" title="Simbol yang diketik di sini TIDAK akan dihapus">
+            </div>
+
+            <div class="options-group">
+                <div class="options-title">🤬 Sensor Kata (Pisah Koma)</div>
+                <input type="text" id="profanityText" placeholder="Cth: rahasia, kasar, typo" class="mini-input wide-input" title="Kata yang dimasukkan di sini akan otomatis diubah menjadi ***">
             </div>
 
             <div class="options-group">
@@ -429,8 +443,10 @@
         const removeNumbers = document.getElementById('removeNumbers');
         const removeEmptyLines = document.getElementById('removeEmptyLines');
         const collapseSpaces = document.getElementById('collapseSpaces');
+        const reverseText = document.getElementById('reverseText');
         const caseOptions = document.getElementsByName('textCase');
         const exceptionsText = document.getElementById('exceptionsText');
+        const profanityText = document.getElementById('profanityText');
         const findText = document.getElementById('findText');
         const replaceText = document.getElementById('replaceText');
         const fileUpload = document.getElementById('fileUpload');
@@ -459,11 +475,9 @@
             document.getElementById(wordId).innerText = `${wordCount} Kata`;
         }
 
-        // Fungsi Menganalisis & Mengupdate Kepadatan Kata
+        // Fungsi Menganalisis Kepadatan Kata
         function updateWordDensity(text) {
             wordDensityList.innerHTML = '';
-            
-            // Ekstrak semua kata (abaikan simbol sisa, jadikan lowercase)
             const words = text.toLowerCase().match(/\b[a-zA-Z0-9À-ÿ']+\b/g);
             
             if (!words || words.length === 0) {
@@ -471,18 +485,14 @@
                 return;
             }
 
-            // Hitung Frekuensi
             const freqMap = {};
             words.forEach(word => {
-                if(word.length > 1) { // abaikan huruf tunggal seperti 'a', 'i', 'e' agar lebih akurat
+                if(word.length > 1 && !word.includes('*')) { // abaikan huruf tunggal & kata tersensor
                     freqMap[word] = (freqMap[word] || 0) + 1;
                 }
             });
 
-            // Urutkan dari yang terbanyak
             const sortedWords = Object.keys(freqMap).map(key => [key, freqMap[key]]).sort((a, b) => b[1] - a[1]);
-
-            // Ambil Top 5
             const topFive = sortedWords.slice(0, 5);
 
             if(topFive.length === 0) {
@@ -490,7 +500,6 @@
                 return;
             }
 
-            // Render ke UI
             topFive.forEach(([word, count]) => {
                 const badge = document.createElement('span');
                 badge.className = 'word-badge';
@@ -520,7 +529,7 @@
                 text = text.replace(/^\s*[\r\n]/gm, '');
             }
 
-            // 3. Membangun Regex Filter Simbol dengan Pengecualian
+            // 3. Membangun Regex Filter Simbol dengan Whitelist
             let regexStr = '[^a-zA-Z';
             if (!removeNumbers.checked) regexStr += '0-9';
             if (keepSpaces.checked) regexStr += '\\s';
@@ -534,12 +543,30 @@
             const regex = new RegExp(regexStr, 'g');
             let cleanedText = text.replace(regex, '');
 
-            // 4. Hapus Spasi Ganda / Berlebih (Horizontal)
+            // 4. Hapus Spasi Ganda
             if (collapseSpaces.checked) {
                 cleanedText = cleanedText.replace(/[ \t]+/g, ' ');
             }
 
-            // 5. Mengatur Kapitalisasi Teks
+            // 5. Fitur Sensor Kata (Profanity Filter)
+            const profanityStr = profanityText.value;
+            if (profanityStr) {
+                const badWords = profanityStr.split(',').map(w => w.trim()).filter(w => w.length > 0);
+                badWords.forEach(word => {
+                    try {
+                        // Mencari kecocokan kata secara utuh (case-insensitive)
+                        const badRegex = new RegExp(`\\b${escapeRegExp(word)}\\b`, 'gi');
+                        cleanedText = cleanedText.replace(badRegex, '*'.repeat(word.length));
+                    } catch(e) {}
+                });
+            }
+
+            // 6. Fitur Pembalik Teks (Reverse)
+            if (reverseText.checked) {
+                cleanedText = cleanedText.split('').reverse().join('');
+            }
+
+            // 7. Mengatur Kapitalisasi Teks
             let selectedCase = 'normal';
             for (const radio of caseOptions) {
                 if (radio.checked) { selectedCase = radio.value; break; }
@@ -549,14 +576,14 @@
 
             outputText.value = cleanedText;
 
-            // Update Statistik & Dashboard Kata
+            // Update Statistik & Dashboard
             updateStats(text, 'srcChars', 'srcWords');
             updateStats(cleanedText, 'outChars', 'outWords');
             updateWordDensity(cleanedText);
         }
 
-        // Kumpulkan semua input untuk trigger fungsi real-time
-        const allInputs = [inputText, exceptionsText, findText, replaceText, keepSpaces, removeNumbers, removeEmptyLines, collapseSpaces];
+        // Event Listeners Input
+        const allInputs = [inputText, exceptionsText, profanityText, findText, replaceText, keepSpaces, removeNumbers, removeEmptyLines, collapseSpaces, reverseText];
         allInputs.forEach(el => el.addEventListener('input', purifyText));
         caseOptions.forEach(radio => radio.addEventListener('change', purifyText));
 
@@ -591,6 +618,7 @@
             outputText.value = '';
             findText.value = '';
             replaceText.value = '';
+            profanityText.value = '';
             fileUpload.value = '';
             localStorage.removeItem('tp_text');
             autosaveBadge.style.display = 'none';
@@ -606,7 +634,7 @@
             });
         }
 
-        // Notifikasi Toast Dinamis
+        // Notifikasi Toast
         function showToast(message) {
             toast.innerText = message;
             toast.classList.add('show');
