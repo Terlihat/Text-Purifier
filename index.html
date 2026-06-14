@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Purifier Pro | v1.1.0</title>
+    <title>Text Purifier Pro | v1.2.0</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
@@ -16,6 +16,8 @@
             --bg-input: #f8fafc;
             --primary: #3498db;
             --primary-hover: #2980b9;
+            --success: #10b981;
+            --success-hover: #059669;
             --accent-red: #e74c3c;
             --accent-red-bg: #ffeaea;
             --accent-red-hover: #ffcece;
@@ -31,6 +33,8 @@
             --bg-input: #0f172a;
             --primary: #38bdf8;
             --primary-hover: #7dd3fc;
+            --success: #34d399;
+            --success-hover: #10b981;
             --accent-red: #f87171;
             --accent-red-bg: #451a1a;
             --accent-red-hover: #652222;
@@ -58,7 +62,7 @@
         .container {
             background: var(--bg-card);
             width: 100%;
-            max-width: 900px;
+            max-width: 950px;
             border-radius: 16px;
             box-shadow: 0 10px 30px var(--shadow);
             padding: 30px;
@@ -98,9 +102,6 @@
             cursor: pointer;
             font-size: 0.85rem;
             font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
 
         /* Opsi Konfigurasi */
@@ -108,26 +109,28 @@
             background: var(--bg-input);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            padding: 15px 20px;
+            padding: 20px;
             margin-bottom: 25px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-between;
+        }
+
+        .options-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
         .options-title {
             font-size: 0.8rem;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 10px;
             color: var(--text-muted);
         }
 
-        .options-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-
-        .checkbox-group {
+        .checkbox-group, .radio-group label {
             display: flex;
             align-items: center;
             gap: 8px;
@@ -135,28 +138,31 @@
             cursor: pointer;
         }
 
-        .checkbox-group input {
-            cursor: pointer;
-            width: 16px;
-            height: 16px;
-        }
-
         .radio-group {
             display: flex;
-            align-items: center;
             gap: 15px;
-            border-left: 2px solid var(--border-color);
-            padding-left: 20px;
         }
 
-        @media (max-width: 650px) {
-            .radio-group {
-                border-left: none;
-                padding-left: 0;
-                width: 100%;
-                padding-top: 10px;
-                border-top: 1px solid var(--border-color);
-            }
+        /* Find & Replace Custom Input */
+        .replace-tools {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mini-input {
+            width: 110px;
+            padding: 8px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-card);
+            color: var(--text-main);
+            font-size: 0.85rem;
+        }
+
+        .mini-input:focus {
+            outline: none;
+            border-color: var(--primary);
         }
 
         /* Text Area Grid */
@@ -166,10 +172,9 @@
             gap: 20px;
         }
 
-        @media (max-width: 650px) {
-            .grid {
-                grid-template-columns: 1fr;
-            }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            .options-panel { flex-direction: column; }
         }
 
         .input-group {
@@ -177,16 +182,37 @@
             flex-direction: column;
         }
 
-        label {
-            font-size: 0.85rem;
-            font-weight: 600;
+        .input-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 8px;
+        }
+
+        label.main-label {
+            font-size: 0.9rem;
+            font-weight: 600;
             color: var(--text-main);
+        }
+
+        .file-upload-btn {
+            font-size: 0.75rem;
+            background: var(--border-color);
+            color: var(--text-main);
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .file-upload-btn:hover {
+            background: var(--primary);
+            color: white;
         }
 
         textarea {
             width: 100%;
-            height: 220px;
+            height: 250px;
             padding: 15px;
             border: 2px solid var(--border-color);
             border-radius: 12px;
@@ -201,7 +227,6 @@
             border-color: var(--primary);
         }
 
-        /* Counter / Statistik Teks */
         .counter-bar {
             display: flex;
             justify-content: space-between;
@@ -218,34 +243,28 @@
             margin-top: 25px;
         }
 
+        .action-right {
+            display: flex;
+            gap: 10px;
+        }
+
         button.btn {
-            padding: 12px 24px;
+            padding: 12px 20px;
             border: none;
             border-radius: 8px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
         }
 
-        .btn-clear {
-            background-color: var(--accent-red-bg);
-            color: var(--accent-red);
-        }
+        .btn-clear { background-color: var(--accent-red-bg); color: var(--accent-red); }
+        .btn-clear:hover { background-color: var(--accent-red-hover); }
 
-        .btn-clear:hover {
-            background-color: var(--accent-red-hover);
-        }
+        .btn-copy { background-color: var(--primary); color: #0f172a; }
+        .btn-copy:hover { background-color: var(--primary-hover); }
 
-        .btn-copy {
-            background-color: var(--primary);
-            color: #0f172a;
-        }
-
-        .btn-copy:hover {
-            background-color: var(--primary-hover);
-            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.2);
-        }
+        .btn-download { background-color: var(--success); color: white; }
+        .btn-download:hover { background-color: var(--success-hover); }
 
         /* Notifikasi Toast */
         #toast {
@@ -262,57 +281,61 @@
             transform: translateY(20px);
             z-index: 999;
         }
-
-        #toast.show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
+        #toast.show { opacity: 1; visibility: visible; transform: translateY(0); }
     </style>
 </head>
 <body data-theme="light">
 
     <div class="container">
         <div class="header-area">
-            <h1>Text Purifier <span class="version-badge">v1.1.0</span></h1>
+            <h1>Text Purifier <span class="version-badge">v1.2.0</span></h1>
             <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
         </div>
 
         <div class="options-panel">
-            <div class="options-title">Pengaturan Pembersihan</div>
-            <div class="options-grid">
-                <label class="checkbox-group">
-                    <input type="checkbox" id="keepSpaces" checked> Pertahankan Spasi
-                </label>
-                <label class="checkbox-group">
-                    <input type="checkbox" id="removeNumbers"> Hapus Angka
-                </label>
-                
+            <div class="options-group">
+                <div class="options-title">Filter Utama</div>
+                <label class="checkbox-group"><input type="checkbox" id="keepSpaces" checked> Pertahankan Spasi</label>
+                <label class="checkbox-group"><input type="checkbox" id="removeNumbers"> Hapus Angka</label>
+            </div>
+
+            <div class="options-group">
+                <div class="options-title">Format Huruf</div>
                 <div class="radio-group">
-                    <label class="checkbox-group">
-                        <input type="radio" name="textCase" value="normal" checked> Normal
-                    </label>
-                    <label class="checkbox-group">
-                        <input type="radio" name="textCase" value="upper"> BESAR
-                    </label>
-                    <label class="checkbox-group">
-                        <input type="radio" name="textCase" value="lower"> kecil
-                    </label>
+                    <label><input type="radio" name="textCase" value="normal" checked> Normal</label>
+                    <label><input type="radio" name="textCase" value="upper"> BESAR</label>
+                    <label><input type="radio" name="textCase" value="lower"> kecil</label>
+                </div>
+            </div>
+
+            <div class="options-group">
+                <div class="options-title">Cari & Ganti (Opsional)</div>
+                <div class="replace-tools">
+                    <input type="text" id="findText" placeholder="Cari (cth: @)" class="mini-input">
+                    <span style="color: var(--text-muted);">➔</span>
+                    <input type="text" id="replaceText" placeholder="Ganti (cth: a)" class="mini-input">
                 </div>
             </div>
         </div>
 
         <div class="grid">
             <div class="input-group">
-                <label for="inputText">Teks Asli</label>
-                <textarea id="inputText" placeholder="Ketik atau tempel teks penuh simbol di sini..."></textarea>
+                <div class="input-header">
+                    <label class="main-label">Teks Asli</label>
+                    <label for="fileUpload" class="file-upload-btn">📂 Unggah .txt</label>
+                    <input type="file" id="fileUpload" accept=".txt" style="display: none;">
+                </div>
+                <textarea id="inputText" placeholder="Ketik, tempel, atau unggah file teks Anda di sini..."></textarea>
                 <div class="counter-bar">
                     <span id="srcChars">0 Karakter</span>
                     <span id="srcWords">0 Kata</span>
                 </div>
             </div>
+            
             <div class="input-group">
-                <label for="outputText">Hasil Bersih</label>
+                <div class="input-header">
+                    <label class="main-label">Hasil Bersih</label>
+                </div>
                 <textarea id="outputText" readonly placeholder="Hasil teks bersih otomatis muncul di sini..."></textarea>
                 <div class="counter-bar">
                     <span id="outChars">0 Karakter</span>
@@ -323,11 +346,14 @@
 
         <div class="actions">
             <button class="btn btn-clear" onclick="clearText()">Hapus Semua</button>
-            <button class="btn btn-copy" onclick="copyText()">Salin Hasil</button>
+            <div class="action-right">
+                <button class="btn btn-copy" onclick="copyText()">Salin Teks</button>
+                <button class="btn btn-download" onclick="downloadText()">⬇️ Unduh .txt</button>
+            </div>
         </div>
     </div>
 
-    <div id="toast">Teks berhasil disalin! ✅</div>
+    <div id="toast" id="toastMsg">Teks berhasil disalin! ✅</div>
 
     <script>
         const inputText = document.getElementById('inputText');
@@ -335,15 +361,17 @@
         const keepSpaces = document.getElementById('keepSpaces');
         const removeNumbers = document.getElementById('removeNumbers');
         const caseOptions = document.getElementsByName('textCase');
+        const findText = document.getElementById('findText');
+        const replaceText = document.getElementById('replaceText');
+        const fileUpload = document.getElementById('fileUpload');
         const toast = document.getElementById('toast');
         const body = document.body;
         const themeBtn = document.getElementById('themeBtn');
 
-        // Fungsi Penghitung Statistik Teks
+        // Fungsi Penghitung Statistik
         function updateStats(text, charId, wordId) {
             const charCount = text.length;
             const wordCount = text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
-            
             document.getElementById(charId).innerText = `${charCount} Karakter`;
             document.getElementById(wordId).innerText = `${wordCount} Kata`;
         }
@@ -352,7 +380,17 @@
         function purifyText() {
             let text = inputText.value;
 
-            // Membangun Regex dinamis berdasarkan opsi pilihan
+            // 1. Fitur Cari & Ganti (dieksekusi sebelum filter simbol)
+            const findStr = findText.value;
+            const repStr = replaceText.value;
+            if (findStr) {
+                // Escape regex agar simbol spesial tidak merusak kode
+                const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const findRegex = new RegExp(escapeRegExp(findStr), 'g');
+                text = text.replace(findRegex, repStr);
+            }
+
+            // 2. Membangun Regex Filter Simbol
             let regexStr = '[^a-zA-Z';
             if (!removeNumbers.checked) regexStr += '0-9';
             if (keepSpaces.checked) regexStr += '\\s';
@@ -361,54 +399,84 @@
             const regex = new RegExp(regexStr, 'g');
             let cleanedText = text.replace(regex, '');
 
-            // Mengatur Kapitalisasi Teks (Case)
+            // 3. Mengatur Kapitalisasi Teks
             let selectedCase = 'normal';
             for (const radio of caseOptions) {
-                if (radio.checked) {
-                    selectedCase = radio.value;
-                    break;
-                }
+                if (radio.checked) { selectedCase = radio.value; break; }
             }
-
-            if (selectedCase === 'upper') {
-                cleanedText = cleanedText.toUpperCase();
-            } else if (selectedCase === 'lower') {
-                cleanedText = cleanedText.toLowerCase();
-            }
+            if (selectedCase === 'upper') cleanedText = cleanedText.toUpperCase();
+            else if (selectedCase === 'lower') cleanedText = cleanedText.toLowerCase();
 
             outputText.value = cleanedText;
 
-            // Perbarui statistik kedua sisi halaman
-            updateStats(text, 'srcChars', 'srcWords');
+            // Update Statistik
+            updateStats(inputText.value, 'srcChars', 'srcWords');
             updateStats(cleanedText, 'outChars', 'outWords');
         }
 
-        // Event Listeners untuk pemrosesan instan (real-time)
+        // Event Listeners Input & Opsi
         inputText.addEventListener('input', purifyText);
         keepSpaces.addEventListener('change', purifyText);
         removeNumbers.addEventListener('change', purifyText);
+        findText.addEventListener('input', purifyText);
+        replaceText.addEventListener('input', purifyText);
         caseOptions.forEach(radio => radio.addEventListener('change', purifyText));
+
+        // Fitur Baca File Upload .txt
+        fileUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                inputText.value = e.target.result;
+                purifyText();
+                showToast("File berhasil dimuat! 📂");
+            };
+            reader.readAsText(file);
+        });
+
+        // Fitur Download File .txt
+        function downloadText() {
+            const text = outputText.value;
+            if (!text) {
+                showToast("Tidak ada teks untuk diunduh ❌");
+                return;
+            }
+            const blob = new Blob([text], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'teks_bersih.txt';
+            a.click();
+            showToast("File berhasil diunduh! ⬇️");
+        }
 
         // Fungsi Menghapus Teks
         function clearText() {
             inputText.value = '';
             outputText.value = '';
+            findText.value = '';
+            replaceText.value = '';
+            fileUpload.value = '';
             purifyText();
             inputText.focus();
         }
 
-        // Fungsi Menyalin Hasil ke Clipboard
+        // Fungsi Copy
         function copyText() {
             if (outputText.value === '') return;
             navigator.clipboard.writeText(outputText.value).then(() => {
-                toast.classList.add('show');
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                }, 2500);
+                showToast("Teks berhasil disalin! ✅");
             });
         }
 
-        // Fungsi Toggle Dark / Light Theme
+        // Notifikasi Toast Dinamis
+        function showToast(message) {
+            toast.innerText = message;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 2500);
+        }
+
+        // Toggle Tema Dark/Light
         function toggleTheme() {
             if (body.getAttribute('data-theme') === 'light') {
                 body.setAttribute('data-theme', 'dark');
