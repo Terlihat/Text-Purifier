@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Purifier Pro | v1.3.0</title>
+    <title>Text Purifier Pro | v1.4.0</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
@@ -248,6 +248,44 @@
             display: none;
         }
 
+        /* Dashboard Analisis Kata */
+        .density-panel {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 18px;
+            margin-top: 25px;
+        }
+
+        .density-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .word-badge {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+
+        .word-count {
+            background: var(--primary);
+            color: #0f172a;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
         /* Aksi Utama */
         .actions {
             display: flex;
@@ -302,7 +340,7 @@
 
     <div class="container">
         <div class="header-area">
-            <h1>Text Purifier <span class="version-badge">v1.3.0</span></h1>
+            <h1>Text Purifier <span class="version-badge">v1.4.0</span></h1>
             <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
         </div>
 
@@ -312,6 +350,7 @@
                 <label class="checkbox-group"><input type="checkbox" id="keepSpaces" checked> Pertahankan Spasi</label>
                 <label class="checkbox-group"><input type="checkbox" id="removeNumbers"> Hapus Angka</label>
                 <label class="checkbox-group"><input type="checkbox" id="removeEmptyLines"> Hapus Baris Kosong</label>
+                <label class="checkbox-group"><input type="checkbox" id="collapseSpaces"> Hapus Spasi Ganda</label>
             </div>
 
             <div class="options-group">
@@ -364,6 +403,13 @@
             </div>
         </div>
 
+        <div class="density-panel">
+            <div class="options-title">📊 Analisis Kepadatan Kata (Top 5 Paling Sering Muncul)</div>
+            <div id="wordDensityList" class="density-list">
+                <span style="color: var(--text-muted); font-size: 0.85rem;">Belum ada data teks untuk dianalisis.</span>
+            </div>
+        </div>
+
         <div class="actions">
             <button class="btn btn-clear" onclick="clearText()">Hapus Semua</button>
             <div class="action-right">
@@ -382,17 +428,19 @@
         const keepSpaces = document.getElementById('keepSpaces');
         const removeNumbers = document.getElementById('removeNumbers');
         const removeEmptyLines = document.getElementById('removeEmptyLines');
+        const collapseSpaces = document.getElementById('collapseSpaces');
         const caseOptions = document.getElementsByName('textCase');
         const exceptionsText = document.getElementById('exceptionsText');
         const findText = document.getElementById('findText');
         const replaceText = document.getElementById('replaceText');
         const fileUpload = document.getElementById('fileUpload');
+        const wordDensityList = document.getElementById('wordDensityList');
         const toast = document.getElementById('toast');
         const autosaveBadge = document.getElementById('autosaveBadge');
         const body = document.body;
         const themeBtn = document.getElementById('themeBtn');
 
-        // Fitur Autosave (Load data saat halaman dibuka)
+        // Fitur Autosave & Theme Loader
         document.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('tp_theme') === 'dark') toggleTheme();
             if (localStorage.getItem('tp_text')) {
@@ -401,7 +449,6 @@
             }
         });
 
-        // Fungsi Escape karakter regex agar tidak error
         const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
         // Fungsi Penghitung Statistik
@@ -410,6 +457,46 @@
             const wordCount = text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
             document.getElementById(charId).innerText = `${charCount} Karakter`;
             document.getElementById(wordId).innerText = `${wordCount} Kata`;
+        }
+
+        // Fungsi Menganalisis & Mengupdate Kepadatan Kata
+        function updateWordDensity(text) {
+            wordDensityList.innerHTML = '';
+            
+            // Ekstrak semua kata (abaikan simbol sisa, jadikan lowercase)
+            const words = text.toLowerCase().match(/\b[a-zA-Z0-9À-ÿ']+\b/g);
+            
+            if (!words || words.length === 0) {
+                wordDensityList.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Belum ada data teks untuk dianalisis.</span>';
+                return;
+            }
+
+            // Hitung Frekuensi
+            const freqMap = {};
+            words.forEach(word => {
+                if(word.length > 1) { // abaikan huruf tunggal seperti 'a', 'i', 'e' agar lebih akurat
+                    freqMap[word] = (freqMap[word] || 0) + 1;
+                }
+            });
+
+            // Urutkan dari yang terbanyak
+            const sortedWords = Object.keys(freqMap).map(key => [key, freqMap[key]]).sort((a, b) => b[1] - a[1]);
+
+            // Ambil Top 5
+            const topFive = sortedWords.slice(0, 5);
+
+            if(topFive.length === 0) {
+                wordDensityList.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Ketik kata yang lebih panjang untuk melihat statistik.</span>';
+                return;
+            }
+
+            // Render ke UI
+            topFive.forEach(([word, count]) => {
+                const badge = document.createElement('span');
+                badge.className = 'word-badge';
+                badge.innerHTML = `${word} <span class="word-count">${count}x</span>`;
+                wordDensityList.appendChild(badge);
+            });
         }
 
         // Fungsi Utama Pembersih Teks
@@ -438,8 +525,7 @@
             if (!removeNumbers.checked) regexStr += '0-9';
             if (keepSpaces.checked) regexStr += '\\s';
             
-            // Tambahkan karakter yang dikecualikan (Whitelist)
-            const exceptions = exceptionsText.value.replace(/\s+/g, ''); // abaikan spasi pada input pengecualian
+            const exceptions = exceptionsText.value.replace(/\s+/g, ''); 
             if (exceptions) {
                 regexStr += escapeRegExp(exceptions);
             }
@@ -448,7 +534,12 @@
             const regex = new RegExp(regexStr, 'g');
             let cleanedText = text.replace(regex, '');
 
-            // 4. Mengatur Kapitalisasi Teks
+            // 4. Hapus Spasi Ganda / Berlebih (Horizontal)
+            if (collapseSpaces.checked) {
+                cleanedText = cleanedText.replace(/[ \t]+/g, ' ');
+            }
+
+            // 5. Mengatur Kapitalisasi Teks
             let selectedCase = 'normal';
             for (const radio of caseOptions) {
                 if (radio.checked) { selectedCase = radio.value; break; }
@@ -458,13 +549,14 @@
 
             outputText.value = cleanedText;
 
-            // Update Statistik
+            // Update Statistik & Dashboard Kata
             updateStats(text, 'srcChars', 'srcWords');
             updateStats(cleanedText, 'outChars', 'outWords');
+            updateWordDensity(cleanedText);
         }
 
         // Kumpulkan semua input untuk trigger fungsi real-time
-        const allInputs = [inputText, exceptionsText, findText, replaceText, keepSpaces, removeNumbers, removeEmptyLines];
+        const allInputs = [inputText, exceptionsText, findText, replaceText, keepSpaces, removeNumbers, removeEmptyLines, collapseSpaces];
         allInputs.forEach(el => el.addEventListener('input', purifyText));
         caseOptions.forEach(radio => radio.addEventListener('change', purifyText));
 
@@ -497,6 +589,9 @@
         function clearText() {
             inputText.value = '';
             outputText.value = '';
+            findText.value = '';
+            replaceText.value = '';
+            fileUpload.value = '';
             localStorage.removeItem('tp_text');
             autosaveBadge.style.display = 'none';
             purifyText();
