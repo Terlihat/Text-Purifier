@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Purifier Pro | v1.7.0</title>
+    <title>Text Purifier Pro | v1.9.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style>
@@ -20,6 +20,8 @@
             --primary-hover: #2980b9;
             --success: #10b981;
             --success-hover: #059669;
+            --warning: #f59e0b;
+            --warning-hover: #d97706;
             --pdf-color: #8b5cf6;
             --pdf-hover: #7c3aed;
             --accent-red: #e74c3c;
@@ -39,6 +41,8 @@
             --primary-hover: #7dd3fc;
             --success: #34d399;
             --success-hover: #10b981;
+            --warning: #fbbf24;
+            --warning-hover: #f59e0b;
             --pdf-color: #a78bfa;
             --pdf-hover: #8b5cf6;
             --accent-red: #f87171;
@@ -75,7 +79,7 @@
             position: relative;
         }
 
-        /* Header & Theme Toggle */
+        /* Header & Theme / Accessibility Toggle */
         .header-area {
             display: flex;
             justify-content: space-between;
@@ -97,6 +101,12 @@
             font-weight: 600;
             vertical-align: middle;
             margin-left: 8px;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
 
         .theme-toggle {
@@ -182,6 +192,15 @@
         .wide-input {
             width: 180px;
         }
+        
+        .number-input {
+            width: 80px;
+        }
+
+        select.mini-input {
+            cursor: pointer;
+            height: 35px;
+        }
 
         /* Text Area Grid */
         .grid {
@@ -199,7 +218,6 @@
             flex-direction: column;
         }
 
-        /* SOLUSI KOTAK TIDAK RATA: Mengunci tinggi baris judul panel agar simetris sempurna */
         .input-header {
             display: flex;
             justify-content: space-between;
@@ -258,7 +276,7 @@
             border: 2px solid var(--border-color);
             border-radius: 12px;
             resize: none;
-            font-size: 1rem;
+            font-size: 16px; /* font size dinamis via JS */
             color: var(--text-main);
             background-color: var(--bg-input);
             line-height: 1.6;
@@ -284,14 +302,29 @@
             font-weight: 500;
             display: none;
         }
+        
+        .char-limit-warning {
+            color: var(--accent-red) !important;
+            font-weight: bold;
+        }
 
-        /* Dashboard Analisis Kata */
-        .density-panel {
+        /* Panels Grid */
+        .panels-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 25px;
+        }
+        
+        @media (max-width: 800px) {
+            .panels-grid { grid-template-columns: 1fr; }
+        }
+
+        .data-panel {
             background: var(--bg-input);
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 18px;
-            margin-top: 25px;
         }
 
         .density-list {
@@ -321,6 +354,57 @@
             padding: 2px 6px;
             border-radius: 10px;
         }
+
+        /* History Log Styles */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .history-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 10px 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+
+        .history-item:hover {
+            border-color: var(--primary);
+        }
+
+        .history-text-preview {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 65%;
+            cursor: pointer;
+        }
+
+        .history-text-preview:hover {
+            color: var(--primary);
+        }
+
+        .history-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .history-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        .history-btn:hover { opacity: 1; }
 
         /* Aksi Utama */
         .actions {
@@ -357,6 +441,9 @@
 
         .btn-pdf { background-color: var(--pdf-color); color: white; }
         .btn-pdf:hover { background-color: var(--pdf-hover); }
+        
+        .btn-save { background-color: var(--warning); color: #0f172a; }
+        .btn-save:hover { background-color: var(--warning-hover); }
 
         /* Notifikasi Toast */
         #toast {
@@ -380,11 +467,25 @@
 
     <div class="container">
         <div class="header-area">
-            <h1>Text Purifier <span class="version-badge">v1.7.0</span></h1>
-            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
+            <h1>Text Purifier <span class="version-badge">v1.9.0</span></h1>
+            <div class="header-controls">
+                <button class="theme-toggle" onclick="changeFontSize(1)" title="Perbesar Teks">🔎 A+</button>
+                <button class="theme-toggle" onclick="changeFontSize(-1)" title="Perkecil Teks">🔎 A-</button>
+                <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
+            </div>
         </div>
 
         <div class="options-panel">
+            <div class="options-group">
+                <div class="options-title">⚡ Preset Cepat</div>
+                <select id="presetSelect" class="mini-input wide-input" onchange="applyPreset()">
+                    <option value="custom">Kustom (Manual)</option>
+                    <option value="cleanall">Bersihkan Semua (Hanya Huruf)</option>
+                    <option value="keepnum">Pertahankan Angka & Spasi</option>
+                    <option value="stripspaces">Hapus Semua Spasi</option>
+                </select>
+            </div>
+
             <div class="options-group">
                 <div class="options-title">Filter & Efek Utama</div>
                 <div class="checkbox-grid">
@@ -408,16 +509,20 @@
 
             <div class="options-group">
                 <div class="options-title">Pengecualian & Sensor</div>
-                <input type="text" id="exceptionsText" placeholder="Pengecualian: , . @" class="mini-input wide-input" title="Simbol yang diketik di sini TIDAK akan dihapus">
+                <input type="text" id="exceptionsText" placeholder="Pengecualian Simbol: , . @" class="mini-input wide-input" title="Simbol yang diketik di sini TIDAK akan dihapus">
                 <input type="text" id="profanityText" placeholder="Sensor Kata: rahasia, kasar" class="mini-input wide-input" style="margin-top: 8px;" title="Kata yang dimasukkan di sini akan otomatis diubah menjadi ***">
             </div>
 
             <div class="options-group">
-                <div class="options-title">Cari & Ganti</div>
+                <div class="options-title">Alat Tambahan</div>
                 <div class="flex-tools">
                     <input type="text" id="findText" placeholder="Cari" class="mini-input">
                     <span style="color: var(--text-muted);">➔</span>
                     <input type="text" id="replaceText" placeholder="Ganti" class="mini-input">
+                </div>
+                <div class="flex-tools" style="margin-top: 8px;">
+                    <label style="font-size: 0.85rem; color: var(--text-muted);">Batas Karakter:</label>
+                    <input type="number" id="charLimit" placeholder="Cth: 280" class="mini-input number-input" min="1">
                 </div>
             </div>
         </div>
@@ -454,16 +559,25 @@
             </div>
         </div>
 
-        <div class="density-panel">
-            <div class="options-title">📊 Analisis Kepadatan Kata (Top 5 Paling Sering Muncul)</div>
-            <div id="wordDensityList" class="density-list">
-                <span style="color: var(--text-muted); font-size: 0.85rem;">Belum ada data teks untuk dianalisis.</span>
+        <div class="panels-grid">
+            <div class="data-panel">
+                <div class="options-title">📊 Kepadatan Kata (Top 5)</div>
+                <div id="wordDensityList" class="density-list">
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">Belum ada data.</span>
+                </div>
+            </div>
+
+            <div class="data-panel">
+                <div class="options-title">🕰️ Riwayat Teks (5 Terakhir)</div>
+                <div id="historyList" class="history-list">
+                    </div>
             </div>
         </div>
 
         <div class="actions">
             <button class="btn btn-clear" onclick="clearText()">Hapus Semua</button>
             <div class="action-right">
+                <button class="btn btn-save" onclick="saveToHistory()">💾 Simpan Riwayat</button>
                 <button class="btn btn-copy" onclick="copyText()">Salin Teks</button>
                 <button class="btn btn-download" onclick="downloadText()">⬇️ Unduh .txt</button>
                 <button class="btn btn-pdf" onclick="downloadPDF()">🖨️ Ekspor PDF</button>
@@ -487,8 +601,11 @@
         const profanityText = document.getElementById('profanityText');
         const findText = document.getElementById('findText');
         const replaceText = document.getElementById('replaceText');
+        const charLimitInput = document.getElementById('charLimit');
+        const presetSelect = document.getElementById('presetSelect');
         const fileUpload = document.getElementById('fileUpload');
         const wordDensityList = document.getElementById('wordDensityList');
+        const historyList = document.getElementById('historyList');
         const toast = document.getElementById('toast');
         const autosaveBadge = document.getElementById('autosaveBadge');
         const body = document.body;
@@ -496,23 +613,73 @@
         const micBtn = document.getElementById('micBtn');
         const speakBtn = document.getElementById('speakBtn');
 
-        // Fitur Autosave & Theme Loader
+        let historyArr = JSON.parse(localStorage.getItem('tp_history')) || [];
+        let currentFontSize = 16;
+
+        // Fitur Loader
         document.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('tp_theme') === 'dark') toggleTheme();
             if (localStorage.getItem('tp_text')) {
                 inputText.value = localStorage.getItem('tp_text');
                 purifyText();
             }
+            renderHistory();
         });
 
         const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-        // Fungsi Penghitung Statistik
+        // Fungsi Pengatur Ukuran Huruf (Font Size)
+        function changeFontSize(direction) {
+            currentFontSize += direction * 2;
+            if (currentFontSize < 12) currentFontSize = 12;
+            if (currentFontSize > 26) currentFontSize = 26;
+            inputText.style.fontSize = currentFontSize + 'px';
+            outputText.style.fontSize = currentFontSize + 'px';
+            showToast(`Ukuran teks: ${currentFontSize}px 🔎`);
+        }
+
+        // Fungsi Mengaktifkan Preset Cepat
+        function applyPreset() {
+            const mode = presetSelect.value;
+            if (mode === 'cleanall') {
+                keepSpaces.checked = true;
+                removeNumbers.checked = true;
+                removeEmptyLines.checked = true;
+                collapseSpaces.checked = true;
+                reverseText.checked = false;
+            } else if (mode === 'keepnum') {
+                keepSpaces.checked = true;
+                removeNumbers.checked = false;
+                removeEmptyLines.checked = false;
+                collapseSpaces.checked = true;
+                reverseText.checked = false;
+            } else if (mode === 'stripspaces') {
+                keepSpaces.checked = false;
+                removeNumbers.checked = false;
+                removeEmptyLines.checked = true;
+                collapseSpaces.checked = false;
+                reverseText.checked = false;
+            }
+            purifyText();
+        }
+
+        // Fungsi Penghitung Statistik & Pengecek Batas Karakter
         function updateStats(text, charId, wordId) {
             const charCount = text.length;
             const wordCount = text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
-            document.getElementById(charId).innerText = `${charCount} Karakter`;
+            
+            const charEl = document.getElementById(charId);
+            charEl.innerText = `${charCount} Karakter`;
             document.getElementById(wordId).innerText = `${wordCount} Kata`;
+
+            if (charId === 'outChars') {
+                const limit = parseInt(charLimitInput.value);
+                if (limit > 0 && charCount > limit) {
+                    charEl.classList.add('char-limit-warning');
+                } else {
+                    charEl.classList.remove('char-limit-warning');
+                }
+            }
         }
 
         // Fungsi Menganalisis Kepadatan Kata
@@ -536,7 +703,7 @@
             const topFive = sortedWords.slice(0, 5);
 
             if(topFive.length === 0) {
-                wordDensityList.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Ketik kata yang lebih panjang untuk melihat statistik.</span>';
+                wordDensityList.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Ketik kata yang lebih panjang.</span>';
                 return;
             }
 
@@ -546,6 +713,51 @@
                 badge.innerHTML = `${word} <span class="word-count">${count}x</span>`;
                 wordDensityList.appendChild(badge);
             });
+        }
+
+        // --- SISTEM RIWAYAT ---
+        function renderHistory() {
+            historyList.innerHTML = '';
+            if (historyArr.length === 0) {
+                historyList.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Belum ada riwayat tersimpan.</span>';
+                return;
+            }
+            historyArr.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <div class="history-text-preview" onclick="restoreHistory(${index})" title="Klik untuk memulihkan">${item.text}</div>
+                    <div class="history-meta">
+                        <span style="color: var(--text-muted); font-size: 0.75rem;">${item.date}</span>
+                        <button class="history-btn" onclick="deleteHistory(${index})" title="Hapus" style="color: var(--accent-red);">❌</button>
+                    </div>
+                `;
+                historyList.appendChild(div);
+            });
+        }
+
+        function saveToHistory() {
+            const text = outputText.value.trim();
+            if (!text) return showToast("Tidak ada teks untuk disimpan ❌");
+            const date = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+            historyArr.unshift({ text, date });
+            if (historyArr.length > 5) historyArr.pop();
+            localStorage.setItem('tp_history', JSON.stringify(historyArr));
+            renderHistory();
+            showToast("Teks disimpan ke riwayat! 💾");
+        }
+
+        function restoreHistory(index) {
+            inputText.value = historyArr[index].text;
+            purifyText();
+            showToast("Teks dipulihkan dari riwayat 🔄");
+        }
+
+        function deleteHistory(index) {
+            historyArr.splice(index, 1);
+            localStorage.setItem('tp_history', JSON.stringify(historyArr));
+            renderHistory();
+            showToast("Riwayat dihapus 🗑️");
         }
 
         // Fungsi Utama Pembersih Teks
@@ -571,7 +783,7 @@
             if (!removeNumbers.checked) regexStr += '0-9';
             if (keepSpaces.checked) regexStr += '\\s';
             
-            const exceptions = exceptionsText.value.replace(/\s+/g, ''); 
+            const exceptions = exceptionsText.value; 
             if (exceptions) regexStr += escapeRegExp(exceptions);
             regexStr += ']';
             
@@ -596,7 +808,7 @@
             // Pembalik Teks
             if (reverseText.checked) cleanedText = cleanedText.split('').reverse().join('');
 
-            // Kapitalisasi Teks (Normal, Besar, Kecil, Title Case)
+            // Kapitalisasi Teks
             let selectedCase = 'normal';
             for (const radio of caseOptions) {
                 if (radio.checked) { selectedCase = radio.value; break; }
@@ -616,9 +828,15 @@
         }
 
         // Event Listeners Input
-        const allInputs = [inputText, exceptionsText, profanityText, findText, replaceText, keepSpaces, removeNumbers, removeEmptyLines, collapseSpaces, reverseText];
-        allInputs.forEach(el => el.addEventListener('input', purifyText));
-        caseOptions.forEach(radio => radio.addEventListener('change', purifyText));
+        const allInputs = [inputText, exceptionsText, profanityText, findText, replaceText, charLimitInput, keepSpaces, removeNumbers, removeEmptyLines, collapseSpaces, reverseText];
+        allInputs.forEach(el => el.addEventListener('input', () => {
+            if (el !== presetSelect) presetSelect.value = 'custom';
+            purifyText();
+        }));
+        caseOptions.forEach(radio => radio.addEventListener('change', () => {
+            presetSelect.value = 'custom';
+            purifyText();
+        }));
 
         // Setup Speech to Text (Dikte Suara)
         let isListening = false;
@@ -675,7 +893,7 @@
             }
         }
 
-        // Fitur Baru: Text-to-Speech (Dengarkan Teks)
+        // Fitur Text-to-Speech (Dengarkan Teks)
         let synth = window.speechSynthesis;
         function toggleSpeak() {
             if (!synth) return showToast("Browser tidak mendukung Fitur Suara ❌");
@@ -760,7 +978,9 @@
             findText.value = '';
             replaceText.value = '';
             profanityText.value = '';
+            charLimitInput.value = '';
             fileUpload.value = '';
+            presetSelect.value = 'custom';
             if (isListening) toggleMic();
             if (synth && synth.speaking) synth.cancel();
             localStorage.removeItem('tp_text');
