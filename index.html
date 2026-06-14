@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Purifier Pro | v1.6.0</title>
-    <!-- Memuat Library jsPDF untuk fitur Ekspor PDF -->
+    <title>Text Purifier Pro | v1.7.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style>
@@ -154,6 +153,7 @@
 
         .radio-group {
             display: flex;
+            flex-wrap: wrap;
             gap: 15px;
         }
 
@@ -199,11 +199,13 @@
             flex-direction: column;
         }
 
+        /* SOLUSI KOTAK TIDAK RATA: Mengunci tinggi baris judul panel agar simetris sempurna */
         .input-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 8px;
+            min-height: 38px; 
         }
 
         label.main-label {
@@ -222,10 +224,13 @@
             background: var(--bg-card);
             border: 1px solid var(--border-color);
             color: var(--text-main);
-            padding: 5px 10px;
+            padding: 5px 12px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .small-btn:hover {
@@ -375,7 +380,7 @@
 
     <div class="container">
         <div class="header-area">
-            <h1>Text Purifier <span class="version-badge">v1.6.0</span></h1>
+            <h1>Text Purifier <span class="version-badge">v1.7.0</span></h1>
             <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
         </div>
 
@@ -397,6 +402,7 @@
                     <label><input type="radio" name="textCase" value="normal" checked> Normal</label>
                     <label><input type="radio" name="textCase" value="upper"> BESAR</label>
                     <label><input type="radio" name="textCase" value="lower"> kecil</label>
+                    <label style="color: var(--success); font-weight: 500;"><input type="radio" name="textCase" value="title"> Aa (Awal Kata)</label>
                 </div>
             </div>
 
@@ -436,6 +442,9 @@
             <div class="input-group">
                 <div class="input-header">
                     <label class="main-label">Hasil Bersih</label>
+                    <div class="tools-group">
+                        <button class="small-btn" id="speakBtn" onclick="toggleSpeak()">🔊 Dengarkan</button>
+                    </div>
                 </div>
                 <textarea id="outputText" readonly placeholder="Hasil teks bersih otomatis muncul di sini..."></textarea>
                 <div class="counter-bar">
@@ -445,7 +454,6 @@
             </div>
         </div>
 
-        <!-- Panel Kepadatan Kata -->
         <div class="density-panel">
             <div class="options-title">📊 Analisis Kepadatan Kata (Top 5 Paling Sering Muncul)</div>
             <div id="wordDensityList" class="density-list">
@@ -486,6 +494,7 @@
         const body = document.body;
         const themeBtn = document.getElementById('themeBtn');
         const micBtn = document.getElementById('micBtn');
+        const speakBtn = document.getElementById('speakBtn');
 
         // Fitur Autosave & Theme Loader
         document.addEventListener('DOMContentLoaded', () => {
@@ -587,13 +596,16 @@
             // Pembalik Teks
             if (reverseText.checked) cleanedText = cleanedText.split('').reverse().join('');
 
-            // Kapitalisasi Teks
+            // Kapitalisasi Teks (Normal, Besar, Kecil, Title Case)
             let selectedCase = 'normal';
             for (const radio of caseOptions) {
                 if (radio.checked) { selectedCase = radio.value; break; }
             }
             if (selectedCase === 'upper') cleanedText = cleanedText.toUpperCase();
             else if (selectedCase === 'lower') cleanedText = cleanedText.toLowerCase();
+            else if (selectedCase === 'title') {
+                cleanedText = cleanedText.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+            }
 
             outputText.value = cleanedText;
 
@@ -608,7 +620,7 @@
         allInputs.forEach(el => el.addEventListener('input', purifyText));
         caseOptions.forEach(radio => radio.addEventListener('change', purifyText));
 
-        // Setup Speech to Text (Web Speech API)
+        // Setup Speech to Text (Dikte Suara)
         let isListening = false;
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
@@ -640,19 +652,18 @@
 
             recognition.onend = () => {
                 if(isListening) {
-                    recognition.start(); // Terus mendengarkan sampai distop manual
+                    recognition.start();
                 } else {
                     micBtn.classList.remove('listening');
                     micBtn.innerHTML = '🎙️ Dikte';
                 }
             };
         } else {
-            micBtn.style.display = 'none'; // Sembunyikan jika browser tidak mendukung
+            micBtn.style.display = 'none';
         }
 
         function toggleMic() {
             if(!SpeechRecognition) return showToast("Browser tidak mendukung Dikte Suara ❌");
-            
             if(isListening) {
                 isListening = false;
                 recognition.stop();
@@ -662,6 +673,32 @@
             } else {
                 recognition.start();
             }
+        }
+
+        // Fitur Baru: Text-to-Speech (Dengarkan Teks)
+        let synth = window.speechSynthesis;
+        function toggleSpeak() {
+            if (!synth) return showToast("Browser tidak mendukung Fitur Suara ❌");
+            
+            if (synth.speaking) {
+                synth.cancel();
+                speakBtn.innerHTML = '🔊 Dengarkan';
+                showToast("Suara dihentikan 🛑");
+                return;
+            }
+
+            const text = outputText.value;
+            if (!text) return showToast("Tidak ada teks untuk didengar ❌");
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'id-ID';
+            
+            utterance.onend = () => { speakBtn.innerHTML = '🔊 Dengarkan'; };
+            utterance.onerror = () => { speakBtn.innerHTML = '🔊 Dengarkan'; };
+
+            speakBtn.innerHTML = '🛑 Berhenti';
+            synth.speak(utterance);
+            showToast("Membacakan teks hasil... 🔊");
         }
 
         // Fitur Baca File Upload .txt
@@ -689,32 +726,27 @@
             showToast("File TXT berhasil diunduh! ⬇️");
         }
 
-        // Fitur Download .pdf (menggunakan jsPDF)
+        // Fitur Download .pdf
         function downloadPDF() {
-            if (typeof window.jspdf === 'undefined') {
-                return showToast("Pustaka PDF sedang dimuat, coba lagi ⏳");
-            }
+            if (typeof window.jspdf === 'undefined') return showToast("Pustaka PDF sedang dimuat ⏳");
             const text = outputText.value;
             if (!text) return showToast("Tidak ada teks untuk diekspor ❌");
 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            
             doc.setFont("helvetica", "normal");
             doc.setFontSize(12);
             
-            // Bungkus teks agar tidak terpotong di tepi kertas
             const lines = doc.splitTextToSize(text, 180);
             let cursorY = 20;
 
-            // Cetak per baris, tambah halaman jika penuh
             for (let i = 0; i < lines.length; i++) {
                 if (cursorY > 280) {
                     doc.addPage();
                     cursorY = 20;
                 }
                 doc.text(lines[i], 15, cursorY);
-                cursorY += 7; // Tinggi antar baris
+                cursorY += 7;
             }
 
             doc.save("Dokumen_Teks_Bersih.pdf");
@@ -730,6 +762,7 @@
             profanityText.value = '';
             fileUpload.value = '';
             if (isListening) toggleMic();
+            if (synth && synth.speaking) synth.cancel();
             localStorage.removeItem('tp_text');
             autosaveBadge.style.display = 'none';
             purifyText();
