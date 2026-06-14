@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Purifier Pro | v1.5.0</title>
+    <title>Text Purifier Pro | v1.6.0</title>
+    <!-- Memuat Library jsPDF untuk fitur Ekspor PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
@@ -18,6 +21,8 @@
             --primary-hover: #2980b9;
             --success: #10b981;
             --success-hover: #059669;
+            --pdf-color: #8b5cf6;
+            --pdf-hover: #7c3aed;
             --accent-red: #e74c3c;
             --accent-red-bg: #ffeaea;
             --accent-red-hover: #ffcece;
@@ -35,6 +40,8 @@
             --primary-hover: #7dd3fc;
             --success: #34d399;
             --success-hover: #10b981;
+            --pdf-color: #a78bfa;
+            --pdf-hover: #8b5cf6;
             --accent-red: #f87171;
             --accent-red-bg: #451a1a;
             --accent-red-hover: #652222;
@@ -62,7 +69,7 @@
         .container {
             background: var(--bg-card);
             width: 100%;
-            max-width: 1100px;
+            max-width: 1150px;
             border-radius: 16px;
             box-shadow: 0 10px 30px var(--shadow);
             padding: 30px;
@@ -183,7 +190,7 @@
             gap: 20px;
         }
 
-        @media (max-width: 850px) {
+        @media (max-width: 900px) {
             .grid { grid-template-columns: 1fr; }
         }
 
@@ -205,24 +212,43 @@
             color: var(--text-main);
         }
 
-        .file-upload-btn {
+        .tools-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .small-btn {
             font-size: 0.75rem;
-            background: var(--border-color);
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
             color: var(--text-main);
-            padding: 4px 10px;
+            padding: 5px 10px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 500;
         }
 
-        .file-upload-btn:hover {
-            background: var(--primary);
-            color: white;
+        .small-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .mic-btn.listening {
+            background-color: var(--accent-red-bg);
+            color: var(--accent-red);
+            border-color: var(--accent-red);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(231, 76, 60, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
         }
 
         textarea {
             width: 100%;
-            height: 260px;
+            height: 280px;
             padding: 15px;
             border: 2px solid var(--border-color);
             border-radius: 12px;
@@ -230,7 +256,7 @@
             font-size: 1rem;
             color: var(--text-main);
             background-color: var(--bg-input);
-            line-height: 1.5;
+            line-height: 1.6;
         }
 
         textarea:focus {
@@ -280,7 +306,6 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
         }
 
         .word-count {
@@ -303,6 +328,7 @@
 
         .action-right {
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
         }
 
@@ -323,6 +349,9 @@
 
         .btn-download { background-color: var(--success); color: white; }
         .btn-download:hover { background-color: var(--success-hover); }
+
+        .btn-pdf { background-color: var(--pdf-color); color: white; }
+        .btn-pdf:hover { background-color: var(--pdf-hover); }
 
         /* Notifikasi Toast */
         #toast {
@@ -346,7 +375,7 @@
 
     <div class="container">
         <div class="header-area">
-            <h1>Text Purifier <span class="version-badge">v1.5.0</span></h1>
+            <h1>Text Purifier <span class="version-badge">v1.6.0</span></h1>
             <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
         </div>
 
@@ -372,13 +401,9 @@
             </div>
 
             <div class="options-group">
-                <div class="options-title">Pengecualian Simbol</div>
-                <input type="text" id="exceptionsText" placeholder="Cth: , . @ -" class="mini-input wide-input" title="Simbol yang diketik di sini TIDAK akan dihapus">
-            </div>
-
-            <div class="options-group">
-                <div class="options-title">🤬 Sensor Kata (Pisah Koma)</div>
-                <input type="text" id="profanityText" placeholder="Cth: rahasia, kasar, typo" class="mini-input wide-input" title="Kata yang dimasukkan di sini akan otomatis diubah menjadi ***">
+                <div class="options-title">Pengecualian & Sensor</div>
+                <input type="text" id="exceptionsText" placeholder="Pengecualian: , . @" class="mini-input wide-input" title="Simbol yang diketik di sini TIDAK akan dihapus">
+                <input type="text" id="profanityText" placeholder="Sensor Kata: rahasia, kasar" class="mini-input wide-input" style="margin-top: 8px;" title="Kata yang dimasukkan di sini akan otomatis diubah menjadi ***">
             </div>
 
             <div class="options-group">
@@ -395,10 +420,13 @@
             <div class="input-group">
                 <div class="input-header">
                     <label class="main-label">Teks Asli <span id="autosaveBadge" class="autosave-badge">(Tersimpan ✔)</span></label>
-                    <label for="fileUpload" class="file-upload-btn">📂 Unggah .txt</label>
-                    <input type="file" id="fileUpload" accept=".txt" style="display: none;">
+                    <div class="tools-group">
+                        <button class="small-btn mic-btn" id="micBtn" onclick="toggleMic()">🎙️ Dikte</button>
+                        <label for="fileUpload" class="small-btn">📂 .txt</label>
+                        <input type="file" id="fileUpload" accept=".txt" style="display: none;">
+                    </div>
                 </div>
-                <textarea id="inputText" placeholder="Ketik, tempel, atau unggah file teks Anda di sini..."></textarea>
+                <textarea id="inputText" placeholder="Ketik, tempel, gunakan suara, atau unggah file teks Anda di sini..."></textarea>
                 <div class="counter-bar">
                     <span id="srcChars">0 Karakter</span>
                     <span id="srcWords">0 Kata</span>
@@ -417,6 +445,7 @@
             </div>
         </div>
 
+        <!-- Panel Kepadatan Kata -->
         <div class="density-panel">
             <div class="options-title">📊 Analisis Kepadatan Kata (Top 5 Paling Sering Muncul)</div>
             <div id="wordDensityList" class="density-list">
@@ -429,6 +458,7 @@
             <div class="action-right">
                 <button class="btn btn-copy" onclick="copyText()">Salin Teks</button>
                 <button class="btn btn-download" onclick="downloadText()">⬇️ Unduh .txt</button>
+                <button class="btn btn-pdf" onclick="downloadPDF()">🖨️ Ekspor PDF</button>
             </div>
         </div>
     </div>
@@ -455,6 +485,7 @@
         const autosaveBadge = document.getElementById('autosaveBadge');
         const body = document.body;
         const themeBtn = document.getElementById('themeBtn');
+        const micBtn = document.getElementById('micBtn');
 
         // Fitur Autosave & Theme Loader
         document.addEventListener('DOMContentLoaded', () => {
@@ -487,7 +518,7 @@
 
             const freqMap = {};
             words.forEach(word => {
-                if(word.length > 1 && !word.includes('*')) { // abaikan huruf tunggal & kata tersensor
+                if(word.length > 1 && !word.includes('*')) {
                     freqMap[word] = (freqMap[word] || 0) + 1;
                 }
             });
@@ -512,11 +543,10 @@
         function purifyText() {
             let text = inputText.value;
 
-            // Autosave ke LocalStorage
             localStorage.setItem('tp_text', text);
             autosaveBadge.style.display = text ? 'inline' : 'none';
 
-            // 1. Cari & Ganti
+            // Cari & Ganti
             const findStr = findText.value;
             const repStr = replaceText.value;
             if (findStr) {
@@ -524,49 +554,40 @@
                 text = text.replace(findRegex, repStr);
             }
 
-            // 2. Hapus Baris Kosong
-            if (removeEmptyLines.checked) {
-                text = text.replace(/^\s*[\r\n]/gm, '');
-            }
+            // Hapus Baris Kosong
+            if (removeEmptyLines.checked) text = text.replace(/^\s*[\r\n]/gm, '');
 
-            // 3. Membangun Regex Filter Simbol dengan Whitelist
+            // Membangun Regex Filter Simbol
             let regexStr = '[^a-zA-Z';
             if (!removeNumbers.checked) regexStr += '0-9';
             if (keepSpaces.checked) regexStr += '\\s';
             
             const exceptions = exceptionsText.value.replace(/\s+/g, ''); 
-            if (exceptions) {
-                regexStr += escapeRegExp(exceptions);
-            }
+            if (exceptions) regexStr += escapeRegExp(exceptions);
             regexStr += ']';
             
             const regex = new RegExp(regexStr, 'g');
             let cleanedText = text.replace(regex, '');
 
-            // 4. Hapus Spasi Ganda
-            if (collapseSpaces.checked) {
-                cleanedText = cleanedText.replace(/[ \t]+/g, ' ');
-            }
+            // Hapus Spasi Ganda
+            if (collapseSpaces.checked) cleanedText = cleanedText.replace(/[ \t]+/g, ' ');
 
-            // 5. Fitur Sensor Kata (Profanity Filter)
+            // Sensor Kata
             const profanityStr = profanityText.value;
             if (profanityStr) {
                 const badWords = profanityStr.split(',').map(w => w.trim()).filter(w => w.length > 0);
                 badWords.forEach(word => {
                     try {
-                        // Mencari kecocokan kata secara utuh (case-insensitive)
                         const badRegex = new RegExp(`\\b${escapeRegExp(word)}\\b`, 'gi');
                         cleanedText = cleanedText.replace(badRegex, '*'.repeat(word.length));
                     } catch(e) {}
                 });
             }
 
-            // 6. Fitur Pembalik Teks (Reverse)
-            if (reverseText.checked) {
-                cleanedText = cleanedText.split('').reverse().join('');
-            }
+            // Pembalik Teks
+            if (reverseText.checked) cleanedText = cleanedText.split('').reverse().join('');
 
-            // 7. Mengatur Kapitalisasi Teks
+            // Kapitalisasi Teks
             let selectedCase = 'normal';
             for (const radio of caseOptions) {
                 if (radio.checked) { selectedCase = radio.value; break; }
@@ -576,7 +597,7 @@
 
             outputText.value = cleanedText;
 
-            // Update Statistik & Dashboard
+            // Update UI
             updateStats(text, 'srcChars', 'srcWords');
             updateStats(cleanedText, 'outChars', 'outWords');
             updateWordDensity(cleanedText);
@@ -586,6 +607,62 @@
         const allInputs = [inputText, exceptionsText, profanityText, findText, replaceText, keepSpaces, removeNumbers, removeEmptyLines, collapseSpaces, reverseText];
         allInputs.forEach(el => el.addEventListener('input', purifyText));
         caseOptions.forEach(radio => radio.addEventListener('change', purifyText));
+
+        // Setup Speech to Text (Web Speech API)
+        let isListening = false;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = false;
+            recognition.lang = 'id-ID';
+
+            recognition.onstart = () => {
+                isListening = true;
+                micBtn.classList.add('listening');
+                micBtn.innerHTML = '🔴 Rekam';
+                showToast("Mikrofon aktif. Silakan bicara 🎙️");
+            };
+
+            recognition.onresult = (event) => {
+                let currentText = inputText.value;
+                const transcript = event.results[event.results.length - 1][0].transcript;
+                inputText.value = currentText + (currentText.endsWith(' ') || currentText === '' ? '' : ' ') + transcript;
+                purifyText();
+            };
+
+            recognition.onerror = () => {
+                showToast("Kesalahan mikrofon ❌");
+                if (isListening) toggleMic();
+            };
+
+            recognition.onend = () => {
+                if(isListening) {
+                    recognition.start(); // Terus mendengarkan sampai distop manual
+                } else {
+                    micBtn.classList.remove('listening');
+                    micBtn.innerHTML = '🎙️ Dikte';
+                }
+            };
+        } else {
+            micBtn.style.display = 'none'; // Sembunyikan jika browser tidak mendukung
+        }
+
+        function toggleMic() {
+            if(!SpeechRecognition) return showToast("Browser tidak mendukung Dikte Suara ❌");
+            
+            if(isListening) {
+                isListening = false;
+                recognition.stop();
+                micBtn.classList.remove('listening');
+                micBtn.innerHTML = '🎙️ Dikte';
+                showToast("Mikrofon dimatikan 🛑");
+            } else {
+                recognition.start();
+            }
+        }
 
         // Fitur Baca File Upload .txt
         fileUpload.addEventListener('change', function(e) {
@@ -600,7 +677,7 @@
             reader.readAsText(file);
         });
 
-        // Fitur Download File .txt
+        // Fitur Download .txt
         function downloadText() {
             const text = outputText.value;
             if (!text) return showToast("Tidak ada teks untuk diunduh ❌");
@@ -609,7 +686,39 @@
             a.href = URL.createObjectURL(blob);
             a.download = 'teks_bersih.txt';
             a.click();
-            showToast("File berhasil diunduh! ⬇️");
+            showToast("File TXT berhasil diunduh! ⬇️");
+        }
+
+        // Fitur Download .pdf (menggunakan jsPDF)
+        function downloadPDF() {
+            if (typeof window.jspdf === 'undefined') {
+                return showToast("Pustaka PDF sedang dimuat, coba lagi ⏳");
+            }
+            const text = outputText.value;
+            if (!text) return showToast("Tidak ada teks untuk diekspor ❌");
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(12);
+            
+            // Bungkus teks agar tidak terpotong di tepi kertas
+            const lines = doc.splitTextToSize(text, 180);
+            let cursorY = 20;
+
+            // Cetak per baris, tambah halaman jika penuh
+            for (let i = 0; i < lines.length; i++) {
+                if (cursorY > 280) {
+                    doc.addPage();
+                    cursorY = 20;
+                }
+                doc.text(lines[i], 15, cursorY);
+                cursorY += 7; // Tinggi antar baris
+            }
+
+            doc.save("Dokumen_Teks_Bersih.pdf");
+            showToast("File PDF berhasil dibuat! 🖨️");
         }
 
         // Fungsi Menghapus Teks
@@ -620,6 +729,7 @@
             replaceText.value = '';
             profanityText.value = '';
             fileUpload.value = '';
+            if (isListening) toggleMic();
             localStorage.removeItem('tp_text');
             autosaveBadge.style.display = 'none';
             purifyText();
