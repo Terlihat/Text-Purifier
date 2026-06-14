@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Purifier Pro | v1.2.0</title>
+    <title>Text Purifier Pro | v1.3.0</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 
@@ -62,7 +62,7 @@
         .container {
             background: var(--bg-card);
             width: 100%;
-            max-width: 950px;
+            max-width: 1000px;
             border-radius: 16px;
             box-shadow: 0 10px 30px var(--shadow);
             padding: 30px;
@@ -113,8 +113,8 @@
             margin-bottom: 25px;
             display: flex;
             flex-wrap: wrap;
-            gap: 20px;
-            justify-content: space-between;
+            gap: 25px;
+            justify-content: flex-start;
         }
 
         .options-group {
@@ -128,6 +128,7 @@
             font-weight: 600;
             text-transform: uppercase;
             color: var(--text-muted);
+            margin-bottom: 4px;
         }
 
         .checkbox-group, .radio-group label {
@@ -143,8 +144,8 @@
             gap: 15px;
         }
 
-        /* Find & Replace Custom Input */
-        .replace-tools {
+        /* Custom Inputs */
+        .flex-tools {
             display: flex;
             align-items: center;
             gap: 8px;
@@ -165,6 +166,10 @@
             border-color: var(--primary);
         }
 
+        .exception-input {
+            width: 150px;
+        }
+
         /* Text Area Grid */
         .grid {
             display: grid;
@@ -172,9 +177,8 @@
             gap: 20px;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 850px) {
             .grid { grid-template-columns: 1fr; }
-            .options-panel { flex-direction: column; }
         }
 
         .input-group {
@@ -220,6 +224,7 @@
             font-size: 1rem;
             color: var(--text-main);
             background-color: var(--bg-input);
+            line-height: 1.5;
         }
 
         textarea:focus {
@@ -236,11 +241,20 @@
             padding: 0 4px;
         }
 
+        .autosave-badge {
+            color: var(--success);
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: none;
+        }
+
         /* Aksi Utama */
         .actions {
             display: flex;
             justify-content: space-between;
             margin-top: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .action-right {
@@ -288,7 +302,7 @@
 
     <div class="container">
         <div class="header-area">
-            <h1>Text Purifier <span class="version-badge">v1.2.0</span></h1>
+            <h1>Text Purifier <span class="version-badge">v1.3.0</span></h1>
             <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark Mode</button>
         </div>
 
@@ -297,6 +311,7 @@
                 <div class="options-title">Filter Utama</div>
                 <label class="checkbox-group"><input type="checkbox" id="keepSpaces" checked> Pertahankan Spasi</label>
                 <label class="checkbox-group"><input type="checkbox" id="removeNumbers"> Hapus Angka</label>
+                <label class="checkbox-group"><input type="checkbox" id="removeEmptyLines"> Hapus Baris Kosong</label>
             </div>
 
             <div class="options-group">
@@ -309,11 +324,16 @@
             </div>
 
             <div class="options-group">
-                <div class="options-title">Cari & Ganti (Opsional)</div>
-                <div class="replace-tools">
-                    <input type="text" id="findText" placeholder="Cari (cth: @)" class="mini-input">
+                <div class="options-title">Pengecualian Simbol</div>
+                <input type="text" id="exceptionsText" placeholder="Cth: , . @ -" class="mini-input exception-input" title="Simbol yang diketik di sini TIDAK akan dihapus">
+            </div>
+
+            <div class="options-group">
+                <div class="options-title">Cari & Ganti</div>
+                <div class="flex-tools">
+                    <input type="text" id="findText" placeholder="Cari" class="mini-input">
                     <span style="color: var(--text-muted);">➔</span>
-                    <input type="text" id="replaceText" placeholder="Ganti (cth: a)" class="mini-input">
+                    <input type="text" id="replaceText" placeholder="Ganti" class="mini-input">
                 </div>
             </div>
         </div>
@@ -321,7 +341,7 @@
         <div class="grid">
             <div class="input-group">
                 <div class="input-header">
-                    <label class="main-label">Teks Asli</label>
+                    <label class="main-label">Teks Asli <span id="autosaveBadge" class="autosave-badge">(Tersimpan ✔)</span></label>
                     <label for="fileUpload" class="file-upload-btn">📂 Unggah .txt</label>
                     <input type="file" id="fileUpload" accept=".txt" style="display: none;">
                 </div>
@@ -353,20 +373,36 @@
         </div>
     </div>
 
-    <div id="toast" id="toastMsg">Teks berhasil disalin! ✅</div>
+    <div id="toast">Teks berhasil disalin! ✅</div>
 
     <script>
+        // Deklarasi Elemen
         const inputText = document.getElementById('inputText');
         const outputText = document.getElementById('outputText');
         const keepSpaces = document.getElementById('keepSpaces');
         const removeNumbers = document.getElementById('removeNumbers');
+        const removeEmptyLines = document.getElementById('removeEmptyLines');
         const caseOptions = document.getElementsByName('textCase');
+        const exceptionsText = document.getElementById('exceptionsText');
         const findText = document.getElementById('findText');
         const replaceText = document.getElementById('replaceText');
         const fileUpload = document.getElementById('fileUpload');
         const toast = document.getElementById('toast');
+        const autosaveBadge = document.getElementById('autosaveBadge');
         const body = document.body;
         const themeBtn = document.getElementById('themeBtn');
+
+        // Fitur Autosave (Load data saat halaman dibuka)
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('tp_theme') === 'dark') toggleTheme();
+            if (localStorage.getItem('tp_text')) {
+                inputText.value = localStorage.getItem('tp_text');
+                purifyText();
+            }
+        });
+
+        // Fungsi Escape karakter regex agar tidak error
+        const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
         // Fungsi Penghitung Statistik
         function updateStats(text, charId, wordId) {
@@ -380,26 +416,39 @@
         function purifyText() {
             let text = inputText.value;
 
-            // 1. Fitur Cari & Ganti (dieksekusi sebelum filter simbol)
+            // Autosave ke LocalStorage
+            localStorage.setItem('tp_text', text);
+            autosaveBadge.style.display = text ? 'inline' : 'none';
+
+            // 1. Cari & Ganti
             const findStr = findText.value;
             const repStr = replaceText.value;
             if (findStr) {
-                // Escape regex agar simbol spesial tidak merusak kode
-                const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                 const findRegex = new RegExp(escapeRegExp(findStr), 'g');
                 text = text.replace(findRegex, repStr);
             }
 
-            // 2. Membangun Regex Filter Simbol
+            // 2. Hapus Baris Kosong
+            if (removeEmptyLines.checked) {
+                text = text.replace(/^\s*[\r\n]/gm, '');
+            }
+
+            // 3. Membangun Regex Filter Simbol dengan Pengecualian
             let regexStr = '[^a-zA-Z';
             if (!removeNumbers.checked) regexStr += '0-9';
             if (keepSpaces.checked) regexStr += '\\s';
+            
+            // Tambahkan karakter yang dikecualikan (Whitelist)
+            const exceptions = exceptionsText.value.replace(/\s+/g, ''); // abaikan spasi pada input pengecualian
+            if (exceptions) {
+                regexStr += escapeRegExp(exceptions);
+            }
             regexStr += ']';
             
             const regex = new RegExp(regexStr, 'g');
             let cleanedText = text.replace(regex, '');
 
-            // 3. Mengatur Kapitalisasi Teks
+            // 4. Mengatur Kapitalisasi Teks
             let selectedCase = 'normal';
             for (const radio of caseOptions) {
                 if (radio.checked) { selectedCase = radio.value; break; }
@@ -410,16 +459,13 @@
             outputText.value = cleanedText;
 
             // Update Statistik
-            updateStats(inputText.value, 'srcChars', 'srcWords');
+            updateStats(text, 'srcChars', 'srcWords');
             updateStats(cleanedText, 'outChars', 'outWords');
         }
 
-        // Event Listeners Input & Opsi
-        inputText.addEventListener('input', purifyText);
-        keepSpaces.addEventListener('change', purifyText);
-        removeNumbers.addEventListener('change', purifyText);
-        findText.addEventListener('input', purifyText);
-        replaceText.addEventListener('input', purifyText);
+        // Kumpulkan semua input untuk trigger fungsi real-time
+        const allInputs = [inputText, exceptionsText, findText, replaceText, keepSpaces, removeNumbers, removeEmptyLines];
+        allInputs.forEach(el => el.addEventListener('input', purifyText));
         caseOptions.forEach(radio => radio.addEventListener('change', purifyText));
 
         // Fitur Baca File Upload .txt
@@ -438,10 +484,7 @@
         // Fitur Download File .txt
         function downloadText() {
             const text = outputText.value;
-            if (!text) {
-                showToast("Tidak ada teks untuk diunduh ❌");
-                return;
-            }
+            if (!text) return showToast("Tidak ada teks untuk diunduh ❌");
             const blob = new Blob([text], { type: 'text/plain' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
@@ -454,9 +497,8 @@
         function clearText() {
             inputText.value = '';
             outputText.value = '';
-            findText.value = '';
-            replaceText.value = '';
-            fileUpload.value = '';
+            localStorage.removeItem('tp_text');
+            autosaveBadge.style.display = 'none';
             purifyText();
             inputText.focus();
         }
@@ -478,13 +520,10 @@
 
         // Toggle Tema Dark/Light
         function toggleTheme() {
-            if (body.getAttribute('data-theme') === 'light') {
-                body.setAttribute('data-theme', 'dark');
-                themeBtn.innerHTML = '☀️ Light Mode';
-            } else {
-                body.setAttribute('data-theme', 'light');
-                themeBtn.innerHTML = '🌙 Dark Mode';
-            }
+            const isLight = body.getAttribute('data-theme') === 'light';
+            body.setAttribute('data-theme', isLight ? 'dark' : 'light');
+            themeBtn.innerHTML = isLight ? '☀️ Light Mode' : '🌙 Dark Mode';
+            localStorage.setItem('tp_theme', isLight ? 'dark' : 'light');
         }
     </script>
 </body>
