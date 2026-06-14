@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Purifier</title>
+    <title>Text Purifier Ultimate Pro | v3.0.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style>
@@ -265,9 +265,14 @@
             color: var(--primary);
         }
         
+        .premium-btn {
+            background-color: var(--bg-card);
+            border: 1px solid var(--premium);
+            color: var(--text-main);
+        }
         .premium-btn:hover {
-            border-color: var(--premium);
-            color: var(--premium);
+            background-color: var(--premium);
+            color: #0f172a !important;
         }
 
         .truncate-btn {
@@ -434,30 +439,13 @@
         .btn-pdf:hover { background-color: var(--pdf-hover); }
         .btn-save { background-color: var(--warning); color: #0f172a; }
         .btn-save:hover { background-color: var(--warning-hover); }
-
-        /* Notifikasi Toast */
-        #toast {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: #10b981;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(20px);
-            z-index: 999;
-        }
-        #toast.show { opacity: 1; visibility: visible; transform: translateY(0); }
     </style>
 </head>
 <body data-theme="light">
 
     <div class="container">
         <div class="header-area">
-            <h1>Text Purifier <span class="version-badge">v3.0 ULTIMATE</span></h1>
+            <h1>Text Purifier <span class="version-badge">v3.0.1 ULTIMATE PRO</span></h1>
             <div class="header-controls">
                 <button class="theme-toggle" onclick="changeFontSize(1)" title="Perbesar Teks">🔎 A+</button>
                 <button class="theme-toggle" onclick="changeFontSize(-1)" title="Perkecil Teks">🔎 A-</button>
@@ -493,17 +481,19 @@
             <div class="options-group">
                 <div class="options-title">Pencarian & Sensor</div>
                 <div class="flex-tools">
-                    <input type="text" id="findText" placeholder="Cari..." class="mini-input">
+                    <input type="text" id="findText" placeholder="Cari kata..." class="mini-input">
                     <span style="color: var(--text-muted);">➔</span>
-                    <input type="text" id="replaceText" placeholder="Ganti..." class="mini-input">
+                    <input type="text" id="replaceText" placeholder="Ganti kata..." class="mini-input">
                 </div>
                 <input type="text" id="profanityText" placeholder="Sensor kata: kasar, rahasia" class="mini-input wide-input" style="margin-top: 8px;">
             </div>
 
             <div class="options-group">
-                <div class="options-title">Batas & Pengecualian</div>
+                <div class="options-title">🔧 Ganti Simbol (Replace Symbol)</div>
                 <div class="flex-tools">
-                    <input type="text" id="exceptionsText" placeholder="Kecualikan Simbol: , . @" class="mini-input wide-input">
+                    <input type="text" id="findSymbol" placeholder="Simbol: @ # $" class="mini-input">
+                    <span style="color: var(--text-muted);">➔</span>
+                    <input type="text" id="replaceSymbol" placeholder="Ganti: * atau kosong" class="mini-input">
                 </div>
                 <div class="flex-tools" style="margin-top: 8px;">
                     <label style="font-size: 0.85rem; color: var(--text-muted);">Max Karakter:</label>
@@ -522,6 +512,7 @@
                 <div class="flex-tools">
                     <button class="small-btn premium-btn" onclick="applyBase64(true)">B64 Encode 🔒</button>
                     <button class="small-btn premium-btn" onclick="applyBase64(false)">B64 Decode 🔓</button>
+                    <input type="hidden" id="cryptoMode" value="none">
                 </div>
             </div>
         </div>
@@ -572,8 +563,7 @@
 
             <div class="data-panel">
                 <div class="options-title">🕰️ Riwayat Teks (5 Terakhir)</div>
-                <div id="historyList" class="history-list">
-                    </div>
+                <div id="historyList" class="history-list"></div>
             </div>
         </div>
 
@@ -588,10 +578,7 @@
         </div>
     </div>
 
-    <div id="toast">Teks berhasil disalin! ✅</div>
-
     <script>
-        // Deklarasi Elemen Utama
         const inputText = document.getElementById('inputText');
         const outputText = document.getElementById('outputText');
         const keepSpaces = document.getElementById('keepSpaces');
@@ -600,9 +587,10 @@
         const collapseSpaces = document.getElementById('collapseSpaces');
         const reverseText = document.getElementById('reverseText');
         const caseOptions = document.getElementsByName('textCase');
-        const exceptionsText = document.getElementById('exceptionsText');
         const findText = document.getElementById('findText');
         const replaceText = document.getElementById('replaceText');
+        const findSymbol = document.getElementById('findSymbol');
+        const replaceSymbol = document.getElementById('replaceSymbol');
         const profanityText = document.getElementById('profanityText');
         const charLimitInput = document.getElementById('charLimit');
         const presetSelect = document.getElementById('presetSelect');
@@ -611,9 +599,9 @@
         const readTimeEl = document.getElementById('readTime');
         const wordDensityList = document.getElementById('wordDensityList');
         const historyList = document.getElementById('historyList');
-        const toast = document.getElementById('toast');
         const autosaveBadge = document.getElementById('autosaveBadge');
         const fileUpload = document.getElementById('fileUpload');
+        const cryptoMode = document.getElementById('cryptoMode');
         const body = document.body;
         const themeBtn = document.getElementById('themeBtn');
         const micBtn = document.getElementById('micBtn');
@@ -624,19 +612,17 @@
         let autoCopyTimer;
         let lastCopiedText = "";
 
-        // Inisialisasi
         document.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('tp_theme') === 'dark') toggleTheme();
             if (localStorage.getItem('tp_text')) {
                 inputText.value = localStorage.getItem('tp_text');
-                purifyText();
             }
+            purifyText();
             renderHistory();
         });
 
         const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-        // Font Size Adjuster
         function changeFontSize(direction) {
             currentFontSize += direction * 2;
             if (currentFontSize < 12) currentFontSize = 12;
@@ -645,7 +631,6 @@
             outputText.style.fontSize = currentFontSize + 'px';
         }
 
-        // Preset Cepat
         function applyPreset() {
             const mode = presetSelect.value;
             if (mode === 'cleanall') {
@@ -658,10 +643,10 @@
                 keepSpaces.checked = false; removeNumbers.checked = false;
                 removeEmptyLines.checked = true; collapseSpaces.checked = false;
             }
+            cryptoMode.value = "none";
             purifyText();
         }
 
-        // Update Statistik & Waktu Baca
         function updateStats(text, charId, wordId) {
             const charCount = text.length;
             const wordCount = text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
@@ -671,15 +656,9 @@
             document.getElementById(wordId).innerText = `${wordCount} Kata`;
 
             if (charId === 'outChars') {
-                // Kalkulasi Waktu Baca (Rata-rata 200 kata per menit -> ~3.3 kata per detik)
                 const readingSeconds = Math.ceil(wordCount / 3.3);
-                if (readingSeconds > 60) {
-                    readTimeEl.innerText = `⏱️ ~${Math.ceil(readingSeconds/60)} mnt waktu baca`;
-                } else {
-                    readTimeEl.innerText = `⏱️ ~${readingSeconds} dtk waktu baca`;
-                }
+                readTimeEl.innerText = readingSeconds > 60 ? `⏱️ ~${Math.ceil(readingSeconds/60)} mnt baca` : `⏱️ ~${readingSeconds} dtk baca`;
 
-                // Logika Batas Karakter
                 const limit = parseInt(charLimitInput.value);
                 if (limit > 0 && charCount > limit) {
                     charEl.classList.add('char-limit-warning');
@@ -691,11 +670,9 @@
             }
         }
 
-        // Smart Truncate (Potong Pintar) - Diperbaiki
         function smartTruncate() {
             const limit = parseInt(charLimitInput.value);
             if (!limit || limit <= 0) return;
-            
             let text = outputText.value; 
             if (text.length <= limit) return;
 
@@ -703,56 +680,45 @@
             let lastPeriod = truncated.lastIndexOf('.');
             let lastSpace = truncated.lastIndexOf(' ');
 
-            if (lastPeriod > limit * 0.7) { 
-                truncated = truncated.substring(0, lastPeriod + 1);
-            } else if (lastSpace > 0) { 
-                truncated = truncated.substring(0, lastSpace);
-            }
+            if (lastPeriod > limit * 0.7) truncated = truncated.substring(0, lastPeriod + 1);
+            else if (lastSpace > 0) truncated = truncated.substring(0, lastSpace);
 
-            // Ganti input asli agar output sinkron, atau hanya hasil akhirnya (disini kita set input)
             inputText.value = truncated;
+            cryptoMode.value = "none";
             purifyText();
-            showToast("Teks dipotong pintar berdasarkan batas! ✂️");
+            alert("Teks dipotong pintar berdasarkan batas! ✂️");
         }
 
-        // Fitur Premium: Base64 Encode/Decode
+        // PERBAIKAN TOTAL SINKRONISASI BASE64 ENCODING/DECODING
         function applyBase64(isEncode) {
+            let text = inputText.value;
+            if (!text) return alert("Tidak ada teks di kolom Teks Asli! ❌");
+            
             try {
-                let text = inputText.value;
-                if (!text) return showToast("Tidak ada teks! ❌");
-                
                 if (isEncode) {
-                    inputText.value = btoa(unescape(encodeURIComponent(text)));
-                    showToast("Teks dienkripsi (Base64)! 🔒");
+                    cryptoMode.value = "encode";
+                    alert("Mode Enkripsi Premium Aktif! 🔒");
                 } else {
-                    inputText.value = decodeURIComponent(escape(atob(text)));
-                    showToast("Teks didekripsi! 🔓");
+                    cryptoMode.value = "decode";
+                    alert("Mode Dekripsi Premium Aktif! 🔓");
                 }
                 purifyText();
             } catch (e) {
-                showToast("Teks bukan format Base64 valid! ❌");
+                alert("Gagal memproses Base64! Periksa kembali teks Anda. ❌");
+                cryptoMode.value = "none";
             }
         }
 
-        // Kepadatan Kata
         function updateWordDensity(text) {
             wordDensityList.innerHTML = '';
             const words = text.toLowerCase().match(/\b[a-zA-Z0-9À-ÿ']+\b/g);
-            
             if (!words || words.length === 0) {
                 wordDensityList.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Belum ada data.</span>';
                 return;
             }
-
             const freqMap = {};
-            words.forEach(word => {
-                if(word.length > 2 && !word.includes('*')) { // Hanya kata > 2 huruf
-                    freqMap[word] = (freqMap[word] || 0) + 1;
-                }
-            });
-
-            const sortedWords = Object.keys(freqMap).map(key => [key, freqMap[key]]).sort((a, b) => b[1] - a[1]);
-            const topFive = sortedWords.slice(0, 5);
+            words.forEach(word => { if(word.length > 2 && !word.includes('*')) freqMap[word] = (freqMap[word] || 0) + 1; });
+            const topFive = Object.keys(freqMap).map(key => [key, freqMap[key]]).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
             topFive.forEach(([word, count]) => {
                 const badge = document.createElement('span');
@@ -762,21 +728,20 @@
             });
         }
 
-        // --- SISTEM RIWAYAT ---
         function renderHistory() {
             historyList.innerHTML = '';
             if (historyArr.length === 0) {
-                historyList.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Belum ada riwayat tersimpan.</span>';
+                historyList.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Belum ada riwayat.</span>';
                 return;
             }
             historyArr.forEach((item, index) => {
                 const div = document.createElement('div');
                 div.className = 'history-item';
                 div.innerHTML = `
-                    <div class="history-text-preview" onclick="restoreHistory(${index})" title="Klik memulihkan">${item.text}</div>
+                    <div class="history-text-preview" onclick="restoreHistory(${index})">${item.text}</div>
                     <div class="history-meta">
                         <span style="color: var(--text-muted); font-size: 0.75rem;">${item.date}</span>
-                        <button class="history-btn" onclick="deleteHistory(${index})" title="Hapus">❌</button>
+                        <button class="history-btn" onclick="deleteHistory(${index})">❌</button>
                     </div>
                 `;
                 historyList.appendChild(div);
@@ -785,19 +750,19 @@
 
         function saveToHistory() {
             const text = outputText.value.trim();
-            if (!text) return showToast("Tidak ada teks untuk disimpan ❌");
+            if (!text) return alert("Tidak ada teks untuk disimpan! ❌");
             const date = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
             historyArr.unshift({ text, date });
             if (historyArr.length > 5) historyArr.pop();
             localStorage.setItem('tp_history', JSON.stringify(historyArr));
             renderHistory();
-            showToast("Teks disimpan ke riwayat! 💾");
+            alert("Teks disimpan ke riwayat! 💾");
         }
 
         function restoreHistory(index) {
             inputText.value = historyArr[index].text;
+            cryptoMode.value = "none";
             purifyText();
-            showToast("Teks dipulihkan 🔄");
         }
 
         function deleteHistory(index) {
@@ -806,224 +771,173 @@
             renderHistory();
         }
 
-        // --- FUNGSI INTI PEMBERSIH TEKS ---
+        // --- CORE FUNGSI PEMBERSIH (LOGIKA SINKRON) ---
         function purifyText() {
             let text = inputText.value;
-
             localStorage.setItem('tp_text', text);
             autosaveBadge.style.display = text ? 'inline' : 'none';
             autosaveBadge.innerText = "(Tersimpan ✔)";
 
-            // 1. Cari & Ganti (Bug Fix)
-            const findStr = findText.value;
-            const repStr = replaceText.value;
-            if (findStr) {
-                const findRegex = new RegExp(escapeRegExp(findStr), 'g');
-                text = text.replace(findRegex, repStr);
+            // EKSEKUSI UTAMA PREMIUM: ENCODING / DECODING
+            if (cryptoMode.value === "encode") {
+                try {
+                    text = btoa(unescape(encodeURIComponent(text)));
+                } catch(e) { cryptoMode.value = "none"; }
+            } else if (cryptoMode.value === "decode") {
+                try {
+                    text = decodeURIComponent(escape(atob(text)));
+                } catch(e) { cryptoMode.value = "none"; }
             }
 
-            // 2. Hapus Baris Kosong
-            if (removeEmptyLines.checked) text = text.replace(/^\s*[\r\n]/gm, '');
+            // JIKA TIDAK SEDANG DALAM MODE KRIPTOGRAFI, JALANKAN FILTER NORMAL
+            if (cryptoMode.value === "none") {
+                // 1. Cari & Ganti Kata
+                const findStr = findText.value;
+                if (findStr) {
+                    text = text.replace(new RegExp(escapeRegExp(findStr), 'g'), replaceText.value);
+                }
 
-            // 3. Regex Filter Utama
-            let regexStr = '[^a-zA-Z';
-            if (!removeNumbers.checked) regexStr += '0-9';
-            if (keepSpaces.checked) regexStr += '\\s';
-            
-            const exceptions = exceptionsText.value; 
-            if (exceptions) regexStr += escapeRegExp(exceptions);
-            regexStr += ']';
-            
-            const regex = new RegExp(regexStr, 'g');
-            let cleanedText = text.replace(regex, '');
+                // 2. PERBAIKAN LOGIKA: REPLACE SYMBOL MASSAL
+                const findSymStr = findSymbol.value;
+                if (findSymStr) {
+                    const cleanSym = escapeRegExp(findSymStr);
+                    text = text.replace(new RegExp('[' + cleanSym + ']', 'g'), replaceSymbol.value);
+                }
 
-            // 4. Hapus Spasi Ganda
-            if (collapseSpaces.checked) cleanedText = cleanedText.replace(/[ \t]+/g, ' ');
+                // 3. Hapus Baris Kosong
+                if (removeEmptyLines.checked) text = text.replace(/^\s*[\r\n]/gm, '');
 
-            // 5. Sensor Kata (Bug Fix)
-            const profanityStr = profanityText.value;
-            if (profanityStr) {
-                const badWords = profanityStr.split(',').map(w => w.trim()).filter(w => w.length > 0);
-                badWords.forEach(word => {
-                    try {
-                        const badRegex = new RegExp(`\\b${escapeRegExp(word)}\\b`, 'gi');
-                        cleanedText = cleanedText.replace(badRegex, '*'.repeat(word.length));
-                    } catch(e) {}
-                });
+                // 4. Bersihkan Angka & Karakter Lain
+                let regexStr = '[^a-zA-Z';
+                if (!removeNumbers.checked) regexStr += '0-9';
+                if (keepSpaces.checked) regexStr += '\\s';
+                regexStr += ']';
+                text = text.replace(new RegExp(regexStr, 'g'), '');
+
+                // 5. Hapus Spasi Ganda
+                if (collapseSpaces.checked) text = text.replace(/[ \t]+/g, ' ');
+
+                // 6. Sensor Kata Kasar
+                const profanityStr = profanityText.value;
+                if (profanityStr) {
+                    profanityStr.split(',').map(w => w.trim()).filter(w => w.length > 0).forEach(word => {
+                        text = text.replace(new RegExp(`\\b${escapeRegExp(word)}\\b`, 'gi'), '*'.repeat(word.length));
+                    });
+                }
             }
 
-            // 6. Pembalik Teks
-            if (reverseText.checked) cleanedText = cleanedText.split('').reverse().join('');
+            // 7. Balik Teks & Case Styling (Berlaku untuk semua mode)
+            if (reverseText.checked) text = text.split('').reverse().join('');
 
-            // 7. Kapitalisasi Teks
             let selectedCase = 'normal';
-            for (const radio of caseOptions) {
-                if (radio.checked) { selectedCase = radio.value; break; }
-            }
-            if (selectedCase === 'upper') cleanedText = cleanedText.toUpperCase();
-            else if (selectedCase === 'lower') cleanedText = cleanedText.toLowerCase();
-            else if (selectedCase === 'title') {
-                cleanedText = cleanedText.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
-            }
+            for (const radio of caseOptions) { if (radio.checked) { selectedCase = radio.value; break; } }
+            if (selectedCase === 'upper') text = text.toUpperCase();
+            else if (selectedCase === 'lower') text = text.toLowerCase();
+            else if (selectedCase === 'title') text = text.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
 
-            outputText.value = cleanedText;
+            outputText.value = text;
 
-            // Update UI & Stats
-            updateStats(text, 'srcChars', 'srcWords');
-            updateStats(cleanedText, 'outChars', 'outWords');
-            updateWordDensity(cleanedText);
+            updateStats(inputText.value, 'srcChars', 'srcWords');
+            updateStats(text, 'outChars', 'outWords');
+            updateWordDensity(text);
 
-            // Fitur Auto-Salin (Bug Fix: Jeda diperpanjang, cek teks sama)
-            if (autoCopy.checked && cleanedText.trim() !== '') {
+            // Debounce Auto Copy 
+            if (autoCopy.checked && text.trim() !== '') {
                 clearTimeout(autoCopyTimer);
                 autoCopyTimer = setTimeout(() => {
-                    if (lastCopiedText !== cleanedText) {
-                        navigator.clipboard.writeText(cleanedText).then(() => {
-                            lastCopiedText = cleanedText;
+                    if (lastCopiedText !== text) {
+                        navigator.clipboard.writeText(text).then(() => {
+                            lastCopiedText = text;
                             autosaveBadge.innerText = "(Tersalin Otomatis 📋✔)";
-                        }).catch(err => console.log('Auto-copy diblokir browser', err));
+                        }).catch(() => {});
                     }
                 }, 1500); 
             }
         }
 
-        // Event Listeners Input
-        const allInputs = [inputText, exceptionsText, findText, replaceText, profanityText, charLimitInput, keepSpaces, removeNumbers, removeEmptyLines, collapseSpaces, reverseText];
+        // Listener Real-time
+        const allInputs = [inputText, findText, replaceText, findSymbol, replaceSymbol, profanityText, charLimitInput, keepSpaces, removeNumbers, removeEmptyLines, collapseSpaces, reverseText];
         allInputs.forEach(el => el.addEventListener('input', () => {
+            if (el === inputText) cryptoMode.value = "none"; // Ketik manual mereset enkripsi
             if (el !== presetSelect) presetSelect.value = 'custom';
             purifyText();
         }));
-        caseOptions.forEach(radio => radio.addEventListener('change', () => {
-            presetSelect.value = 'custom';
-            purifyText();
-        }));
+        caseOptions.forEach(radio => radio.addEventListener('change', () => { purifyText(); }));
 
-        // Speech to Text (Dikte)
+        // Audio System (Dikte)
         let isListening = false;
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition;
 
         if (SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = false;
-            recognition.lang = 'id-ID';
-
-            recognition.onstart = () => {
-                isListening = true;
-                micBtn.classList.add('listening');
-                micBtn.innerHTML = '🔴 Rekam';
-                showToast("Mikrofon aktif 🎙️");
-            };
-
-            recognition.onresult = (event) => {
+            recognition = new SpeechRecognition(); recognition.continuous = true; recognition.lang = 'id-ID';
+            recognition.onstart = () => { isListening = true; micBtn.innerHTML = '🔴 Rekam'; };
+            recognition.onresult = (e) => {
                 let currentText = inputText.value;
-                const transcript = event.results[event.results.length - 1][0].transcript;
+                const transcript = e.results[e.results.length - 1][0].transcript;
                 inputText.value = currentText + (currentText.endsWith(' ') || currentText === '' ? '' : ' ') + transcript;
-                purifyText();
+                cryptoMode.value = "none"; purifyText();
             };
-
-            recognition.onerror = () => { showToast("Kesalahan mikrofon ❌"); if (isListening) toggleMic(); };
-            recognition.onend = () => {
-                if(isListening) recognition.start();
-                else { micBtn.classList.remove('listening'); micBtn.innerHTML = '🎙️ Dikte'; }
-            };
+            recognition.onend = () => { if(isListening) recognition.start(); else micBtn.innerHTML = '🎙️ Dikte'; };
         } else { micBtn.style.display = 'none'; }
 
         function toggleMic() {
-            if(!SpeechRecognition) return showToast("Browser tidak mendukung Dikte ❌");
-            if(isListening) {
-                isListening = false; recognition.stop();
-                micBtn.classList.remove('listening'); micBtn.innerHTML = '🎙️ Dikte';
-                showToast("Mikrofon dimatikan 🛑");
-            } else { recognition.start(); }
+            if(!SpeechRecognition) return alert("Browser tidak support dikte!");
+            if(isListening) { isListening = false; recognition.stop(); } else { recognition.start(); }
         }
 
-        // Text-to-Speech (Dengarkan)
         let synth = window.speechSynthesis;
         function toggleSpeak() {
-            if (!synth) return showToast("Browser tidak mendukung Fitur Suara ❌");
-            if (synth.speaking) {
-                synth.cancel(); speakBtn.innerHTML = '🔊 Dengarkan';
-                showToast("Suara dihentikan 🛑"); return;
-            }
-            const text = outputText.value;
-            if (!text) return showToast("Tidak ada teks ❌");
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'id-ID';
+            if (!synth) return alert("Browser tidak support Text-to-Speech!");
+            if (synth.speaking) { synth.cancel(); speakBtn.innerHTML = '🔊 Dengarkan'; return; }
+            if (!outputText.value) return;
+            const utterance = new SpeechSynthesisUtterance(outputText.value); utterance.lang = 'id-ID';
             utterance.onend = () => { speakBtn.innerHTML = '🔊 Dengarkan'; };
-            utterance.onerror = () => { speakBtn.innerHTML = '🔊 Dengarkan'; };
-            speakBtn.innerHTML = '🛑 Berhenti';
-            synth.speak(utterance);
-            showToast("Membacakan hasil... 🔊");
+            speakBtn.innerHTML = '🛑 Berhenti'; synth.speak(utterance);
         }
 
-        // Upload File .txt
         fileUpload.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+            const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
-                inputText.value = e.target.result; purifyText();
-                showToast("File dimuat! 📂");
-            };
+            reader.onload = function(e) { inputText.value = e.target.result; cryptoMode.value = "none"; purifyText(); };
             reader.readAsText(file);
         });
 
-        // Ekspor File (TXT & PDF)
         function downloadText() {
-            const text = outputText.value;
-            if (!text) return showToast("Tidak ada teks ❌");
-            const blob = new Blob([text], { type: 'text/plain' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob); a.download = 'Teks_Bersih_Ultimate.txt';
-            a.click(); showToast("File TXT diunduh! ⬇️");
+            if (!outputText.value) return;
+            const blob = new Blob([outputText.value], { type: 'text/plain' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Teks_Clean_v3.txt'; a.click();
         }
 
         function downloadPDF() {
-            if (typeof window.jspdf === 'undefined') return showToast("Pustaka PDF sedang dimuat ⏳");
-            const text = outputText.value;
-            if (!text) return showToast("Tidak ada teks ❌");
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.setFont("helvetica", "normal"); doc.setFontSize(12);
-            const lines = doc.splitTextToSize(text, 180);
+            if (!outputText.value) return;
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
+            const lines = doc.splitTextToSize(outputText.value, 180);
             let cursorY = 20;
             for (let i = 0; i < lines.length; i++) {
                 if (cursorY > 280) { doc.addPage(); cursorY = 20; }
                 doc.text(lines[i], 15, cursorY); cursorY += 7;
             }
-            doc.save("Dokumen_Teks_Ultimate.pdf");
-            showToast("File PDF dibuat! 🖨️");
+            doc.save("Dokumen_Clean.pdf");
         }
 
-        // Fungsi Lainnya (Clear, Copy, Toast, Theme)
         function clearText() {
-            inputText.value = ''; outputText.value = ''; exceptionsText.value = '';
-            findText.value = ''; replaceText.value = ''; profanityText.value = '';
-            charLimitInput.value = ''; fileUpload.value = ''; presetSelect.value = 'custom';
-            if (isListening) toggleMic();
-            if (synth && synth.speaking) synth.cancel();
-            localStorage.removeItem('tp_text'); autosaveBadge.style.display = 'none';
-            purifyText(); inputText.focus(); showToast("Teks dihapus 🗑️");
+            inputText.value = ''; outputText.value = ''; findText.value = ''; replaceText.value = '';
+            findSymbol.value = ''; replaceSymbol.value = ''; profanityText.value = ''; charLimitInput.value = '';
+            cryptoMode.value = "none"; presetSelect.value = 'custom';
+            if (isListening) toggleMic(); if (synth && synth.speaking) synth.cancel();
+            purifyText();
         }
 
         function copyText() {
-            if (outputText.value === '') return;
-            navigator.clipboard.writeText(outputText.value).then(() => {
-                showToast("Teks disalin! ✅");
-            });
-        }
-
-        function showToast(message) {
-            toast.innerText = message; toast.classList.add('show');
-            setTimeout(() => { toast.classList.remove('show'); }, 2500);
+            if (!outputText.value) return;
+            navigator.clipboard.writeText(outputText.value).then(() => alert("Teks Berhasil Disalin! ✅"));
         }
 
         function toggleTheme() {
             const isLight = body.getAttribute('data-theme') === 'light';
             body.setAttribute('data-theme', isLight ? 'dark' : 'light');
-            themeBtn.innerHTML = isLight ? '☀️ Light Mode' : '🌙 Dark Mode';
+            themeBtn.innerHTML = isLight ? '☀️ Light' : '🌙 Dark';
             localStorage.setItem('tp_theme', isLight ? 'dark' : 'light');
         }
     </script>
