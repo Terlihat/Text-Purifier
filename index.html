@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Purifier Pro | v1.9.0</title>
+    <title>Text Purifier Pro | v2.0.0</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <style>
@@ -90,17 +90,19 @@
         h1 {
             font-size: 1.8rem;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .version-badge {
             font-size: 0.75rem;
-            background: var(--primary);
-            color: #0f172a;
-            padding: 3px 8px;
+            background: linear-gradient(135deg, var(--warning), var(--accent-red));
+            color: #ffffff;
+            padding: 4px 10px;
             border-radius: 20px;
-            font-weight: 600;
-            vertical-align: middle;
-            margin-left: 8px;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(245, 158, 11, 0.3);
         }
 
         .header-controls {
@@ -256,6 +258,24 @@
             color: var(--primary);
         }
 
+        .truncate-btn {
+            background-color: var(--accent-red-bg);
+            color: var(--accent-red);
+            border-color: var(--accent-red);
+            display: none; /* Disembunyikan default */
+            animation: fadeIn 0.3s;
+        }
+        
+        .truncate-btn:hover {
+            background-color: var(--accent-red);
+            color: white;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
         .mic-btn.listening {
             background-color: var(--accent-red-bg);
             color: var(--accent-red);
@@ -276,7 +296,7 @@
             border: 2px solid var(--border-color);
             border-radius: 12px;
             resize: none;
-            font-size: 16px; /* font size dinamis via JS */
+            font-size: 16px; 
             color: var(--text-main);
             background-color: var(--bg-input);
             line-height: 1.6;
@@ -467,7 +487,7 @@
 
     <div class="container">
         <div class="header-area">
-            <h1>Text Purifier <span class="version-badge">v1.9.0</span></h1>
+            <h1>Text Purifier <span class="version-badge">v2.0 PRO</span></h1>
             <div class="header-controls">
                 <button class="theme-toggle" onclick="changeFontSize(1)" title="Perbesar Teks">🔎 A+</button>
                 <button class="theme-toggle" onclick="changeFontSize(-1)" title="Perkecil Teks">🔎 A-</button>
@@ -477,13 +497,16 @@
 
         <div class="options-panel">
             <div class="options-group">
-                <div class="options-title">⚡ Preset Cepat</div>
+                <div class="options-title">⚡ Cepat & Otomatis</div>
                 <select id="presetSelect" class="mini-input wide-input" onchange="applyPreset()">
                     <option value="custom">Kustom (Manual)</option>
                     <option value="cleanall">Bersihkan Semua (Hanya Huruf)</option>
                     <option value="keepnum">Pertahankan Angka & Spasi</option>
                     <option value="stripspaces">Hapus Semua Spasi</option>
                 </select>
+                <label class="checkbox-group" style="color: var(--success); font-weight: 600; margin-top: 8px;">
+                    <input type="checkbox" id="autoCopy"> 📋 Auto-Salin Teks
+                </label>
             </div>
 
             <div class="options-group">
@@ -503,25 +526,15 @@
                     <label><input type="radio" name="textCase" value="normal" checked> Normal</label>
                     <label><input type="radio" name="textCase" value="upper"> BESAR</label>
                     <label><input type="radio" name="textCase" value="lower"> kecil</label>
-                    <label style="color: var(--success); font-weight: 500;"><input type="radio" name="textCase" value="title"> Aa (Awal Kata)</label>
+                    <label style="color: var(--warning); font-weight: 500;"><input type="radio" name="textCase" value="title"> Aa (Awal Kata)</label>
                 </div>
             </div>
 
             <div class="options-group">
-                <div class="options-title">Pengecualian & Sensor</div>
-                <input type="text" id="exceptionsText" placeholder="Pengecualian Simbol: , . @" class="mini-input wide-input" title="Simbol yang diketik di sini TIDAK akan dihapus">
-                <input type="text" id="profanityText" placeholder="Sensor Kata: rahasia, kasar" class="mini-input wide-input" style="margin-top: 8px;" title="Kata yang dimasukkan di sini akan otomatis diubah menjadi ***">
-            </div>
-
-            <div class="options-group">
-                <div class="options-title">Alat Tambahan</div>
-                <div class="flex-tools">
-                    <input type="text" id="findText" placeholder="Cari" class="mini-input">
-                    <span style="color: var(--text-muted);">➔</span>
-                    <input type="text" id="replaceText" placeholder="Ganti" class="mini-input">
-                </div>
+                <div class="options-title">Pengecualian & Batas</div>
+                <input type="text" id="exceptionsText" placeholder="Pengecualian Simbol: , . @" class="mini-input wide-input" title="Simbol di sini tidak akan dihapus">
                 <div class="flex-tools" style="margin-top: 8px;">
-                    <label style="font-size: 0.85rem; color: var(--text-muted);">Batas Karakter:</label>
+                    <label style="font-size: 0.85rem; color: var(--text-muted);">Batas Teks:</label>
                     <input type="number" id="charLimit" placeholder="Cth: 280" class="mini-input number-input" min="1">
                 </div>
             </div>
@@ -537,7 +550,7 @@
                         <input type="file" id="fileUpload" accept=".txt" style="display: none;">
                     </div>
                 </div>
-                <textarea id="inputText" placeholder="Ketik, tempel, gunakan suara, atau unggah file teks Anda di sini..."></textarea>
+                <textarea id="inputText" placeholder="Ketik, tempel, atau gunakan suara Anda di sini..."></textarea>
                 <div class="counter-bar">
                     <span id="srcChars">0 Karakter</span>
                     <span id="srcWords">0 Kata</span>
@@ -548,6 +561,7 @@
                 <div class="input-header">
                     <label class="main-label">Hasil Bersih</label>
                     <div class="tools-group">
+                        <button class="small-btn truncate-btn" id="truncateBtn" onclick="smartTruncate()">✂️ Potong Pintar</button>
                         <button class="small-btn" id="speakBtn" onclick="toggleSpeak()">🔊 Dengarkan</button>
                     </div>
                 </div>
@@ -598,11 +612,10 @@
         const reverseText = document.getElementById('reverseText');
         const caseOptions = document.getElementsByName('textCase');
         const exceptionsText = document.getElementById('exceptionsText');
-        const profanityText = document.getElementById('profanityText');
-        const findText = document.getElementById('findText');
-        const replaceText = document.getElementById('replaceText');
         const charLimitInput = document.getElementById('charLimit');
         const presetSelect = document.getElementById('presetSelect');
+        const autoCopy = document.getElementById('autoCopy');
+        const truncateBtn = document.getElementById('truncateBtn');
         const fileUpload = document.getElementById('fileUpload');
         const wordDensityList = document.getElementById('wordDensityList');
         const historyList = document.getElementById('historyList');
@@ -615,6 +628,7 @@
 
         let historyArr = JSON.parse(localStorage.getItem('tp_history')) || [];
         let currentFontSize = 16;
+        let autoCopyTimer;
 
         // Fitur Loader
         document.addEventListener('DOMContentLoaded', () => {
@@ -676,10 +690,36 @@
                 const limit = parseInt(charLimitInput.value);
                 if (limit > 0 && charCount > limit) {
                     charEl.classList.add('char-limit-warning');
+                    truncateBtn.style.display = 'inline-flex'; // Munculkan tombol potong
                 } else {
                     charEl.classList.remove('char-limit-warning');
+                    truncateBtn.style.display = 'none'; // Sembunyikan tombol potong
                 }
             }
+        }
+
+        // Fitur Pemotong Kalimat Pintar (Smart Truncate)
+        function smartTruncate() {
+            const limit = parseInt(charLimitInput.value);
+            if (!limit || limit <= 0) return;
+            
+            let text = inputText.value; // Potong dari sumber asli agar sinkron
+            if (text.length <= limit) return;
+
+            // Cari titik terdekat atau spasi sebelum batas karakter
+            let truncated = text.substring(0, limit);
+            let lastPeriod = truncated.lastIndexOf('.');
+            let lastSpace = truncated.lastIndexOf(' ');
+
+            if (lastPeriod > limit * 0.7) { // Jika ada titik dekat akhir
+                truncated = truncated.substring(0, lastPeriod + 1);
+            } else if (lastSpace > 0) { // Jika tidak, potong di ujung kata
+                truncated = truncated.substring(0, lastSpace);
+            }
+
+            inputText.value = truncated;
+            purifyText();
+            showToast("Teks berhasil dipotong dengan pintar! ✂️");
         }
 
         // Fungsi Menganalisis Kepadatan Kata
@@ -694,18 +734,13 @@
 
             const freqMap = {};
             words.forEach(word => {
-                if(word.length > 1 && !word.includes('*')) {
+                if(word.length > 1) {
                     freqMap[word] = (freqMap[word] || 0) + 1;
                 }
             });
 
             const sortedWords = Object.keys(freqMap).map(key => [key, freqMap[key]]).sort((a, b) => b[1] - a[1]);
             const topFive = sortedWords.slice(0, 5);
-
-            if(topFive.length === 0) {
-                wordDensityList.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Ketik kata yang lebih panjang.</span>';
-                return;
-            }
 
             topFive.forEach(([word, count]) => {
                 const badge = document.createElement('span');
@@ -766,14 +801,7 @@
 
             localStorage.setItem('tp_text', text);
             autosaveBadge.style.display = text ? 'inline' : 'none';
-
-            // Cari & Ganti
-            const findStr = findText.value;
-            const repStr = replaceText.value;
-            if (findStr) {
-                const findRegex = new RegExp(escapeRegExp(findStr), 'g');
-                text = text.replace(findRegex, repStr);
-            }
+            autosaveBadge.innerText = "(Tersimpan ✔)";
 
             // Hapus Baris Kosong
             if (removeEmptyLines.checked) text = text.replace(/^\s*[\r\n]/gm, '');
@@ -792,18 +820,6 @@
 
             // Hapus Spasi Ganda
             if (collapseSpaces.checked) cleanedText = cleanedText.replace(/[ \t]+/g, ' ');
-
-            // Sensor Kata
-            const profanityStr = profanityText.value;
-            if (profanityStr) {
-                const badWords = profanityStr.split(',').map(w => w.trim()).filter(w => w.length > 0);
-                badWords.forEach(word => {
-                    try {
-                        const badRegex = new RegExp(`\\b${escapeRegExp(word)}\\b`, 'gi');
-                        cleanedText = cleanedText.replace(badRegex, '*'.repeat(word.length));
-                    } catch(e) {}
-                });
-            }
 
             // Pembalik Teks
             if (reverseText.checked) cleanedText = cleanedText.split('').reverse().join('');
@@ -825,10 +841,20 @@
             updateStats(text, 'srcChars', 'srcWords');
             updateStats(cleanedText, 'outChars', 'outWords');
             updateWordDensity(cleanedText);
+
+            // Fitur Auto-Salin (Jeda 1 Detik)
+            if (autoCopy.checked && cleanedText.trim() !== '') {
+                clearTimeout(autoCopyTimer);
+                autoCopyTimer = setTimeout(() => {
+                    navigator.clipboard.writeText(cleanedText).then(() => {
+                        autosaveBadge.innerText = "(Tersalin Otomatis 📋✔)";
+                    }).catch(err => console.log('Auto-copy gagal', err));
+                }, 1000);
+            }
         }
 
         // Event Listeners Input
-        const allInputs = [inputText, exceptionsText, profanityText, findText, replaceText, charLimitInput, keepSpaces, removeNumbers, removeEmptyLines, collapseSpaces, reverseText];
+        const allInputs = [inputText, exceptionsText, charLimitInput, keepSpaces, removeNumbers, removeEmptyLines, collapseSpaces, reverseText];
         allInputs.forEach(el => el.addEventListener('input', () => {
             if (el !== presetSelect) presetSelect.value = 'custom';
             purifyText();
@@ -975,9 +1001,7 @@
         function clearText() {
             inputText.value = '';
             outputText.value = '';
-            findText.value = '';
-            replaceText.value = '';
-            profanityText.value = '';
+            exceptionsText.value = '';
             charLimitInput.value = '';
             fileUpload.value = '';
             presetSelect.value = 'custom';
