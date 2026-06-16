@@ -93,7 +93,7 @@ h1 { font-size: 1.8rem; font-weight: 700; display: flex; align-items: center; ga
 .number-input { width: 80px; }
 select.mini-input { cursor: pointer; height: 35px; }
 
-/* UPDATE: Grid Dev Tools diubah ke 4 Kolom berbaris rata */
+/* Grid Dev Tools 4 Kolom berbaris rata */
 .dev-tools-grid { 
     display: grid; 
     grid-template-columns: repeat(4, 1fr); 
@@ -101,7 +101,7 @@ select.mini-input { cursor: pointer; height: 35px; }
     max-width: 480px; 
 }
 
-/* UPDATE: Tombol reset membentang penuh ke samping */
+/* Tombol reset membentang penuh ke samping */
 .reset-btn-wide {
     grid-column: span 4;
 }
