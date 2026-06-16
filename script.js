@@ -1,6 +1,7 @@
 const inputText = document.getElementById('inputText');
 const outputText = document.getElementById('outputText');
 const keepSpaces = document.getElementById('keepSpaces');
+const keepSymbols = document.getElementById('keepSymbols'); // Fitur Baru
 const removeNumbers = document.getElementById('removeNumbers');
 const removeEmptyLines = document.getElementById('removeEmptyLines');
 const collapseSpaces = document.getElementById('collapseSpaces');
@@ -59,13 +60,13 @@ function changeFontSize(direction) {
 function applyPreset() {
     const mode = presetSelect.value;
     if (mode === 'cleanall') {
-        keepSpaces.checked = true; removeNumbers.checked = true;
+        keepSpaces.checked = true; keepSymbols.checked = false; removeNumbers.checked = true;
         removeEmptyLines.checked = true; collapseSpaces.checked = true;
     } else if (mode === 'keepnum') {
-        keepSpaces.checked = true; removeNumbers.checked = false;
+        keepSpaces.checked = true; keepSymbols.checked = true; removeNumbers.checked = false;
         removeEmptyLines.checked = false; collapseSpaces.checked = true;
     } else if (mode === 'stripspaces') {
-        keepSpaces.checked = false; removeNumbers.checked = false;
+        keepSpaces.checked = false; keepSymbols.checked = false; removeNumbers.checked = false;
         removeEmptyLines.checked = true; collapseSpaces.checked = false;
     }
     setTransformMode('none'); 
@@ -171,8 +172,11 @@ function purifyText() {
         let regexStr = '[^a-zA-Z';
         if (!removeNumbers.checked) regexStr += '0-9';
         if (keepSpaces.checked) regexStr += '\\s';
+        if (keepSymbols.checked) regexStr += '\\p{P}\\p{S}'; // Mempertahankan tanda baca & simbol unik
         regexStr += ']';
-        text = text.replace(new RegExp(regexStr, 'g'), '');
+        
+        // Menggunakan flag 'gu' agar pendeteksian Unicode Property Escape berjalan lancar
+        text = text.replace(new RegExp(regexStr, 'gu'), '');
 
         if (collapseSpaces.checked) text = text.replace(/[ \t]+/g, ' ');
 
@@ -212,7 +216,7 @@ function purifyText() {
     }
 }
 
-const allInputs = [inputText, findText, replaceText, findSymbol, replaceSymbol, profanityText, charLimitInput, keepSpaces, removeNumbers, removeEmptyLines, collapseSpaces, reverseText];
+const allInputs = [inputText, findText, replaceText, findSymbol, replaceSymbol, profanityText, charLimitInput, keepSpaces, keepSymbols, removeNumbers, removeEmptyLines, collapseSpaces, reverseText];
 allInputs.forEach(el => el.addEventListener('input', () => {
     if (el === inputText && transformMode.value.startsWith('b64')) setTransformMode('none'); 
     if (el !== presetSelect) presetSelect.value = 'custom';
